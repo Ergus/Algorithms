@@ -1,0 +1,3 @@
+[submodule "ArgParserC"]
+	path = submodules/ArgParserC
+	url = https://github.com/Ergus/ArgParserC.git
