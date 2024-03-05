@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(ArgParserC LANGUAGES C CXX)
 
-include_directories(h)
+include_directories(h hpp)
 
 add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
