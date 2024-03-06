@@ -22,11 +22,11 @@
 
 // CUDA kernel to perform bitonic merge
 
-
-void bitonicSort(std::vector<int> &data)
+template <typename T>
+void bitonicSort(T first, T last)
 {
-	int *h_data = &data[0];
-	size_t size = data.size();
+	int *h_data = &*first;
+	const size_t size = std::distance(first, last);
 
 	int *d_data;
 	cudaMalloc((void**)&d_data, size * sizeof(int));
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	std::cout << v << std::endl;
 
 	std::vector<int> vcopy = v;
-	bitonicSort(vcopy);
+	bitonicSort(vcopy.begin(), vcopy.end());
 	std::cout << vcopy << std::endl;
 
 	return 0;
