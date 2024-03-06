@@ -161,7 +161,7 @@ namespace my {
 		if (counter++ < nThreads) {
 			t = std::thread(mergeSortStdParallel<Iter>, first, middle, nThreads); 
 		} else {
-			mergeSortStd(first, middle, nThreads);
+			mergeSortStd(first, middle);
 		}
 
 		if (std::distance(middle, last) > 1)

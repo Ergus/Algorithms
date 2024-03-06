@@ -25,7 +25,7 @@
 
 int main(int argc, char **argv)
 {
-	init_args (argc, argv);
+	argparser::init(argc, argv);
 	const size_t size = argparser::cl<int>("array_size");
 
 	std::vector<int> v(size);
