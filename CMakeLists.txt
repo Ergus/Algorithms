@@ -16,7 +16,7 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-project(ArgParserC LANGUAGES C CXX)
+project(ArgParserC LANGUAGES CXX CUDA)
 
 include_directories(h hpp)
 
@@ -24,6 +24,7 @@ add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
 
 file(GLOB CPP_SOURCES cpp/*.cpp)
+file(GLOB CPP_SOURCES cuda/*.cu)
 
 enable_testing()
 
