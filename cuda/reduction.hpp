@@ -51,8 +51,8 @@ __global__ void reduceBasicKernel(T *data, const size_t size, T* output)
 }
 
 
-template <typename T>
-typename T::value_type reduceBasic(T start, T end)
+template <typename T, typename Op>
+typename T::value_type reduceFun(T start, T end, Op fun)
 {
 	typedef typename T::value_type type;
 
@@ -72,7 +72,7 @@ typename T::value_type reduceBasic(T start, T end)
 	const size_t sharedSize = blockdim * sizeof(type);
 
 	size_t count = 0;
-	reduceBasicKernel<<<nblocks, blockdim, sharedSize>>>(d_data, size, d_result[0]);
+	fun<<<nblocks, blockdim, sharedSize>>>(d_data, size, d_result[0]);
 
 	if (nblocks > 1)
 	{	
@@ -83,7 +83,7 @@ typename T::value_type reduceBasic(T start, T end)
 
 		while(size > 1)
 		{
-			reduceBasicKernel<<<nblocks, blockdim, sharedSize>>>(
+			fun<<<nblocks, blockdim, sharedSize>>>(
 				d_result[count % 2], size, d_result[(count + 1) % 2]
 			);
 
@@ -104,3 +104,8 @@ typename T::value_type reduceBasic(T start, T end)
 	return result;
 }
 
+template <typename T>
+typename T::value_type reduceBasic(T start, T end)
+{
+	return reduceFun(start, end, reduceBasicKernel<typename T::value_type>);
+}
