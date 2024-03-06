@@ -13,6 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <random>
+#include <algorithm>
+
 template <typename T>
 __global__ void bitonicKernel(T *dev_values, int j, int k)
 {
@@ -32,5 +35,27 @@ __global__ void bitonicKernel(T *dev_values, int j, int k)
 	}
 }
 
+template <typename T>
+void bitonicSort(T first, T last)
+{
+	int *h_data = &*first;
+	const size_t size = std::distance(first, last);
+
+	int *d_data;
+	cudaMalloc((void**)&d_data, size * sizeof(int));
+    cudaMemcpy(d_data, h_data, size * sizeof(int), cudaMemcpyHostToDevice);
+
+	const int blockdim = 32;
+	const int nblocks = (size + blockdim - 1) / blockdim;
+
+	for (size_t k = 2; k <= size; k <<= 1) {
+		for (size_t j = k>>1; j>0; j >>= 1) {
+			bitonicKernel<<<nblocks, blockdim>>>(d_data, j, k);
+		}
+	}
+
+	cudaMemcpy(h_data, d_data, size * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaFree(d_data);
+}
 
 
