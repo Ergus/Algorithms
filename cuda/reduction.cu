@@ -31,15 +31,21 @@ int main(int argc, char **argv)
 	static std::random_device rd;    // you only need to initialize it once
     static std::mt19937 mte(rd());   // this is a relative big object to create
 
-    std::uniform_int_distribution<int> dist(0, 1024); // 
+    std::uniform_int_distribution<int> dist(0, 1024); // dist(mte)
 
-    std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
+    std::generate(v.begin(), v.end(), [&dist](){ return 1; });
 
-	std::cout << v << std::endl;
+	// std::cout << v << std::endl;
 
 	std::cout << "C++: " << std::reduce(v.begin(), v.end()) << std::endl;
 
-	std::cout << "Cuda: " << reduceBasic(v.begin(), v.end()) << std::endl;
+	std::cout << "CudaBasic: " << reduceBasic(v.begin(), v.end()) << std::endl;
+
+	std::cout << "Cuda1: " << reduceN<1>(v.begin(), v.end()) << std::endl;
+	std::cout << "Cuda2: " << reduceN<2>(v.begin(), v.end()) << std::endl;
+
+	std::cout << "Cuda3: " << reduceN<3>(v.begin(), v.end()) << std::endl;
+	std::cout << "Cuda4: " << reduceN<4>(v.begin(), v.end()) << std::endl;
 
 
 	return 0;

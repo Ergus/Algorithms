@@ -22,15 +22,64 @@ constexpr T mysum(const T& lhs, const T& rhs)
 }
 
 /**
+   @tparam T array type
+   @tparam N Number of elements to load
    @param[out] output must be numblocks dim
  */
-template <typename T>
-__global__ void reduceBasicKernel(T *data, const size_t size, T* output)
+template <typename T, int N>
+__global__ void reduceNKernel(T *data, const size_t size, T* output)
 {
     extern __shared__ T sharedData[]; // must have blockdim
 
     int tid = threadIdx.x;
+
+	int globalIdx = blockIdx.x * blockDim.x * N + tid;
+
+	sharedData[tid] = 0;
+
+    // Load data into shared memory
+	for (int i = 0; i < N && globalIdx < size; ++i)
+	{
+		sharedData[tid] += data[globalIdx];
+		globalIdx += blockDim.x;
+	}
+    __syncthreads();
+
+    // Perform reduction in shared memory
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride)
+			sharedData[tid] += sharedData[tid + stride];
+        __syncthreads();
+    }
+
+	// if (tid < 32) {
+	// 	volatile int* sdata = sharedData;
+	// 	sdata[tid] += sdata[tid + 32];
+	// 	sdata[tid] += sdata[tid + 16];
+	// 	sdata[tid] += sdata[tid + 8];
+	// 	sdata[tid] += sdata[tid + 4];
+	// 	sdata[tid] += sdata[tid + 2];
+	// 	sdata[tid] += sdata[tid + 1]; 
+	// }
+	__syncthreads();
+	
+    // Write the result back to global memory
+    if (tid == 0) {
+        output[blockIdx.x] = sharedData[0];
+    }
+}
+
+
+template <typename T>
+__global__ void reduceWarpKernel(T *data, const size_t size, T* output)
+{
+    __shared__ T sharedData[32]; // must have blockdim
+
+    int tid = threadIdx.x;
     int globalIdx = blockIdx.x * blockDim.x + tid;
+
+	int lame = tid % 32;
+	int wid = tid / 32;
 
     // Load data into shared memory
 	sharedData[tid] = (globalIdx < size ? data[globalIdx] : 0);
@@ -38,9 +87,8 @@ __global__ void reduceBasicKernel(T *data, const size_t size, T* output)
 
     // Perform reduction in shared memory
     for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride) {
+        if (tid < stride)
 			sharedData[tid] += sharedData[tid + stride];
-        }
         __syncthreads();
     }
 
@@ -50,8 +98,14 @@ __global__ void reduceBasicKernel(T *data, const size_t size, T* output)
     }
 }
 
-
-template <typename T, typename Op>
+/**
+   @tparam Tfrac relation of rate data/thread to call. If the kernel accesses 2
+   data elements / then this value must be two in order to create less useless
+   threads
+   @tparam T iterator type
+   @tparam Op cuda kernel basic reduction kernel
+ */
+template <int Tfrac, typename T, typename Op>
 typename T::value_type reduceFun(T start, T end, Op fun)
 {
 	typedef typename T::value_type type;
@@ -64,7 +118,8 @@ typename T::value_type reduceFun(T start, T end, Op fun)
     cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 
 	const size_t blockdim = 32;
-	size_t nblocks = (size + blockdim - 1) / blockdim;
+	const size_t step = Tfrac * blockdim;
+	size_t nblocks = (size + step - 1) / step;
 
 	type *d_result[2];
 	cudaMalloc((void**)&d_result[0], nblocks * sizeof(type));
@@ -77,7 +132,7 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 	if (nblocks > 1)
 	{	
 		size = nblocks;
-		nblocks = (size + blockdim - 1) / blockdim;
+		nblocks = (size + step - 1) / step;
 
 		cudaMalloc((void**)&d_result[1], nblocks * sizeof(int));
 
@@ -88,7 +143,7 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 			);
 
 			size = nblocks;
-			nblocks = (nblocks + blockdim - 1) / blockdim;
+			nblocks = (nblocks + step - 1) / step;
 			++count;
 		}
 	}
@@ -107,5 +162,11 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 template <typename T>
 typename T::value_type reduceBasic(T start, T end)
 {
-	return reduceFun(start, end, reduceBasicKernel<typename T::value_type>);
+	return reduceFun<1>(start, end, reduceNKernel<typename T::value_type, 1>);
+}
+
+template <int N, typename T>
+typename T::value_type reduceN(T start, T end)
+{
+	return reduceFun<N>(start, end, reduceNKernel<typename T::value_type, N>);
 }
