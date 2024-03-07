@@ -21,6 +21,16 @@ constexpr T mysum(const T& lhs, const T& rhs)
 	return lhs + rhs;
 }
 
+template <typename T>
+__device__ void warpReduce(volatile T* sdata, int tid) {
+	sdata[tid] += sdata[tid + 32];
+	sdata[tid] += sdata[tid + 16];
+	sdata[tid] += sdata[tid + 8];
+	sdata[tid] += sdata[tid + 4];
+	sdata[tid] += sdata[tid + 2];
+	sdata[tid] += sdata[tid + 1];
+}
+
 /**
    @tparam T array type
    @tparam N Number of elements to load
@@ -46,22 +56,14 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
     __syncthreads();
 
     // Perform reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    for (int stride = blockDim.x / 2; stride > 32; stride >>= 1) {
         if (tid < stride)
 			sharedData[tid] += sharedData[tid + stride];
         __syncthreads();
     }
 
-	// if (tid < 32) {
-	// 	volatile int* sdata = sharedData;
-	// 	sdata[tid] += sdata[tid + 32];
-	// 	sdata[tid] += sdata[tid + 16];
-	// 	sdata[tid] += sdata[tid + 8];
-	// 	sdata[tid] += sdata[tid + 4];
-	// 	sdata[tid] += sdata[tid + 2];
-	// 	sdata[tid] += sdata[tid + 1]; 
-	// }
-	__syncthreads();
+	if (tid < 32)
+		warpReduce(sharedData, tid);
 	
     // Write the result back to global memory
     if (tid == 0) {
@@ -105,7 +107,7 @@ __global__ void reduceWarpKernel(T *data, const size_t size, T* output)
    @tparam T iterator type
    @tparam Op cuda kernel basic reduction kernel
  */
-template <int Tfrac, typename T, typename Op>
+template <int blockdim, int Tfrac, typename T, typename Op>
 typename T::value_type reduceFun(T start, T end, Op fun)
 {
 	typedef typename T::value_type type;
@@ -117,7 +119,6 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 	cudaMalloc((void**)&d_data, size * sizeof(type));
     cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 
-	const size_t blockdim = 32;
 	const size_t step = Tfrac * blockdim;
 	size_t nblocks = (size + step - 1) / step;
 
@@ -162,11 +163,11 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 template <typename T>
 typename T::value_type reduceBasic(T start, T end)
 {
-	return reduceFun<1>(start, end, reduceNKernel<typename T::value_type, 1>);
+	return reduceFun<64, 1>(start, end, reduceNKernel<typename T::value_type, 1>);
 }
 
 template <int N, typename T>
 typename T::value_type reduceN(T start, T end)
 {
-	return reduceFun<N>(start, end, reduceNKernel<typename T::value_type, N>);
+	return reduceFun<64, N>(start, end, reduceNKernel<typename T::value_type, N>);
 }
