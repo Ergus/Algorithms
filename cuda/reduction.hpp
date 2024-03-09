@@ -40,16 +40,16 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
 
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 
-	T localData = 0;
+	T localValue = 0;
 
     // Load data into shared memory
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
-		localData += data[globalIdx];
+		localValue = TOp(localValue, data[globalIdx]);
 		globalIdx += blockDim.x;
 	}
 
-	sharedData[tid] = localData;
+	sharedData[tid] = localValue;
     __syncthreads();
 
     // Perform reduction in shared memory
@@ -101,7 +101,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
     // Load data into local variable
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
-		localValue += data[globalIdx];
+		localValue = TOp(localValue, data[globalIdx]);
 		globalIdx += blockDim.x;
 	}
 	__syncthreads();
