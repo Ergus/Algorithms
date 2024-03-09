@@ -12,6 +12,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma nv_diag_suppress 815 // suppress consr return warning
+
 #include <argparser.hpp>
 #include <iostream>
 #include <numeric>
