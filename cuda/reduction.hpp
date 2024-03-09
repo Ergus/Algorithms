@@ -31,7 +31,7 @@ __device__ T __sum(const T& a,const T& b)
    default: __device__ T __sum(const T& a,const T& b)
    @param[out] output must be numblocks dim
  */
-template <typename T, int N, T (*TOp)(const T&, const T&) =  __sum<T>>
+template <typename T, int N, T (*TOp)(const T&, const T&)>
 __global__ void reduceNKernel(T *data, const size_t size, T* output)
 {
     extern __shared__ T sharedData[]; // must have blockdim
@@ -83,7 +83,7 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
    default: __device__ T __sum(const T& a,const T& b)
    @param[out] output must be numblocks dim
 */
-template <typename T, int N, T (*TOp)(const T&, const T&) =  __sum<T>>
+template <typename T, int N, T (*TOp)(const T&, const T&)>
 __global__ void reduceNWarp(T *data, const size_t size, T* output)
 {
 	__shared__ T sharedData[32]; // must have blockdim
@@ -192,17 +192,20 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 template <typename T>
 typename T::value_type reduceBasic(T start, T end)
 {
-	return reduceFun<64, 1>(start, end, reduceNKernel<typename T::value_type, 1, __sum>);
+	using type = typename T::value_type;
+	return reduceFun<64, 1>(start, end, reduceNKernel<type, 1, __sum<type>>);
 }
 
 template <int N, typename T>
 typename T::value_type reduceN(T start, T end)
 {
-	return reduceFun<64, N>(start, end, reduceNKernel<typename T::value_type, N>);
+	using type = typename T::value_type;
+	return reduceFun<64, N>(start, end, reduceNKernel<type, N, __sum<type>>);
 }
 
 template <int N, typename T>
 typename T::value_type reduceWarp(T start, T end)
 {
-	return reduceFun<64, N>(start, end, reduceNWarp<typename T::value_type, N>);
+	using type = typename T::value_type;
+	return reduceFun<64, N>(start, end, reduceNWarp<type, N, __sum<type>>);
 }
