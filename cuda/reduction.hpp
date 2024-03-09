@@ -18,6 +18,12 @@
 #include <functional>
 
 template <typename T>
+__device__ T __unit(const T& a)
+{
+	return a;
+}
+
+template <typename T>
 __device__ T __sum(const T& a,const T& b)
 {
 	return a + b;
@@ -27,11 +33,14 @@ __device__ T __sum(const T& a,const T& b)
    Reduction using shared memory
    @tparam T array type
    @tparam N Number of elements to load
-   @tparam TOp Binary operator device function defining how to perform the adition.
-   default: __device__ T __sum(const T& a,const T& b)
+   @tparam TOp Unary operator to transform the array input element before adition.
+   this function is usefull when instead of reducing we intend to perform other
+   operations like counting. default: __device__ T __unit(const T& a) that return a.
+   @tparam TBOp Binary operator device function defining how to perform the adition.
+   default: __device__ T __sum(const T& a,const T& b) that returns a+b.
    @param[out] output must be numblocks dim
  */
-template <typename T, int N, T (*TOp)(const T&, const T&)>
+template <typename T, int N, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
 __global__ void reduceNKernel(T *data, const size_t size, T* output)
 {
     extern __shared__ T sharedData[]; // must have blockdim
@@ -45,7 +54,7 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
     // Load data into shared memory
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
-		localValue = TOp(localValue, data[globalIdx]);
+		localValue = TBOp(localValue, TOp(data[globalIdx]));
 		globalIdx += blockDim.x;
 	}
 
@@ -55,19 +64,19 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
     // Perform reduction in shared memory
     for (int stride = blockDim.x / 2; stride > 32; stride >>= 1) {
         if (tid < stride)
-			sharedData[tid] = TOp(sharedData[tid], sharedData[tid + stride]);
+			sharedData[tid] = TBOp(sharedData[tid], sharedData[tid + stride]);
         __syncthreads();
     }
 
 	if (tid < 32)
 	{
 		volatile T* sdata = sharedData;
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 32]);
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 16]);
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 8]);
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 4]);
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 2]);
-		sdata[tid] = TOp((T)sdata[tid], (T)sdata[tid + 1]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 32]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 16]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 8]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 4]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 2]);
+		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 1]);
 	}
 	
     // Write the result back to global memory
@@ -83,7 +92,7 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
    default: __device__ T __sum(const T& a,const T& b)
    @param[out] output must be numblocks dim
 */
-template <typename T, int N, T (*TOp)(const T&, const T&)>
+template <typename T, int N, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
 __global__ void reduceNWarp(T *data, const size_t size, T* output)
 {
 	__shared__ T sharedData[32]; // must have blockdim
@@ -101,14 +110,14 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
     // Load data into local variable
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
-		localValue = TOp(localValue, data[globalIdx]);
+		localValue = TBOp(localValue, TOp(data[globalIdx]));
 		globalIdx += blockDim.x;
 	}
 	__syncthreads();
 	
 	// Now reduce per warp into lanes 0
 	for (int offset = 16; offset > 0; offset >>= 1)
-		localValue = TOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
+		localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
 
 	// All lanes 0 write the variable to shared memory
 	if (lane == 0)
@@ -121,7 +130,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 		localValue = sharedData[lane];
 
 		for (int offset = 16; offset > 0; offset >>= 1)
-			localValue = TOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
+			localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
 	}
 
 	// Thread 0 in warp 0
@@ -193,19 +202,19 @@ template <typename T>
 typename T::value_type reduceBasic(T start, T end)
 {
 	using type = typename T::value_type;
-	return reduceFun<64, 1>(start, end, reduceNKernel<type, 1, __sum<type>>);
+	return reduceFun<64, 1>(start, end, reduceNKernel<type, 1, __unit<type>, __sum<type>>);
 }
 
 template <int N, typename T>
 typename T::value_type reduceN(T start, T end)
 {
 	using type = typename T::value_type;
-	return reduceFun<64, N>(start, end, reduceNKernel<type, N, __sum<type>>);
+	return reduceFun<64, N>(start, end, reduceNKernel<type, N, __unit<type>, __sum<type>>);
 }
 
 template <int N, typename T>
 typename T::value_type reduceWarp(T start, T end)
 {
 	using type = typename T::value_type;
-	return reduceFun<64, N>(start, end, reduceNWarp<type, N, __sum<type>>);
+	return reduceFun<64, N>(start, end, reduceNWarp<type, N, __unit<type>, __sum<type>>);
 }
