@@ -15,12 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-template <typename T>
-constexpr T mysum(const T& lhs, const T& rhs)
-{
-	return lhs + rhs;
-}
-
 /**
    Reduction using shared memory
    @tparam T array type
@@ -36,14 +30,16 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
 
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 
-	sharedData[tid] = 0;
+	T localData = 0;
 
     // Load data into shared memory
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
-		sharedData[tid] += data[globalIdx];
+		localData += data[globalIdx];
 		globalIdx += blockDim.x;
 	}
+
+	sharedData[tid] = localData;
     __syncthreads();
 
     // Perform reduction in shared memory
@@ -65,9 +61,8 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
 	}
 	
     // Write the result back to global memory
-    if (tid == 0) {
+    if (tid == 0)
         output[blockIdx.x] = sharedData[0];
-    }
 }
 
 /**
