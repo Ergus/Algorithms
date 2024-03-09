@@ -21,17 +21,8 @@ constexpr T mysum(const T& lhs, const T& rhs)
 	return lhs + rhs;
 }
 
-template <typename T>
-__device__ void warpReduce(volatile T* sdata, int tid) {
-	sdata[tid] += sdata[tid + 32];
-	sdata[tid] += sdata[tid + 16];
-	sdata[tid] += sdata[tid + 8];
-	sdata[tid] += sdata[tid + 4];
-	sdata[tid] += sdata[tid + 2];
-	sdata[tid] += sdata[tid + 1];
-}
-
 /**
+   Reduction using shared memory
    @tparam T array type
    @tparam N Number of elements to load
    @param[out] output must be numblocks dim
@@ -63,7 +54,15 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
     }
 
 	if (tid < 32)
-		warpReduce(sharedData, tid);
+	{
+		volatile T* sdata = sharedData;
+		sdata[tid] += sdata[tid + 32];
+		sdata[tid] += sdata[tid + 16];
+		sdata[tid] += sdata[tid + 8];
+		sdata[tid] += sdata[tid + 4];
+		sdata[tid] += sdata[tid + 2];
+		sdata[tid] += sdata[tid + 1];
+	}
 	
     // Write the result back to global memory
     if (tid == 0) {
@@ -71,33 +70,56 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
     }
 }
 
-
-template <typename T>
-__global__ void reduceWarpKernel(T *data, const size_t size, T* output)
+/**
+   Reduction using registers memory
+   @tparam T array type
+   @tparam N Number of elements to load
+   @param[out] output must be numblocks dim
+*/
+template <typename T, int N>
+__global__ void reduceNWarp(T *data, const size_t size, T* output)
 {
-    __shared__ T sharedData[32]; // must have blockdim
+	__shared__ T sharedData[32]; // must have blockdim
 
-    int tid = threadIdx.x;
-    int globalIdx = blockIdx.x * blockDim.x + tid;
+	const int tid = threadIdx.x;
+	const int lane = tid % 32;
+	const int wid = tid / 32;
 
-	int lame = tid % 32;
-	int wid = tid / 32;
+	if (wid == 0)
+		sharedData[lane] = 0;
 
-    // Load data into shared memory
-	sharedData[tid] = (globalIdx < size ? data[globalIdx] : 0);
-    __syncthreads();
+	int globalIdx = blockIdx.x * blockDim.x * N + tid;
+	T localValue = 0;
 
-    // Perform reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (tid < stride)
-			sharedData[tid] += sharedData[tid + stride];
-        __syncthreads();
-    }
+    // Load data into local variable
+	for (int i = 0; i < N && globalIdx < size; ++i)
+	{
+		localValue += data[globalIdx];
+		globalIdx += blockDim.x;
+	}
+	__syncthreads();
+	
+	// Now reduce per warp into lanes 0
+	for (int offset = 16; offset > 0; offset >>= 1)
+		localValue += __shfl_down_sync(0xffffffff, localValue, offset);
 
-    // Write the result back to global memory
-    if (tid == 0) {
-        output[blockIdx.x] = sharedData[0];
-    }
+	// All lanes 0 write the variable to shared memory
+	if (lane == 0)
+		sharedData[wid] = localValue;
+
+	__syncthreads();
+
+	// If in warp 0 the perform local reduction
+	if (wid == 0) {
+		localValue = sharedData[lane];
+
+		for (int offset = 16; offset > 0; offset >>= 1)
+			localValue += __shfl_down_sync(0xffffffff, localValue, offset);
+	}
+
+	// Thread 0 in warp 0
+    if (tid == 0)
+        output[blockIdx.x] = localValue;
 }
 
 /**
@@ -170,4 +192,10 @@ template <int N, typename T>
 typename T::value_type reduceN(T start, T end)
 {
 	return reduceFun<64, N>(start, end, reduceNKernel<typename T::value_type, N>);
+}
+
+template <int N, typename T>
+typename T::value_type reduceWarp(T start, T end)
+{
+	return reduceFun<64, N>(start, end, reduceNWarp<typename T::value_type, N>);
 }

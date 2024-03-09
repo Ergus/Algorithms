@@ -48,6 +48,13 @@ int main(int argc, char **argv)
 	std::cout << "Cuda4: " << reduceN<4>(v.begin(), v.end()) << std::endl;
 
 
+	std::cout << "Cuda1Warp: " << reduceWarp<1>(v.begin(), v.end()) << std::endl;
+	std::cout << "Cuda2Warp: " << reduceWarp<2>(v.begin(), v.end()) << std::endl;
+
+	std::cout << "Cuda3Warp: " << reduceWarp<3>(v.begin(), v.end()) << std::endl;
+	std::cout << "Cuda4Warp: " << reduceWarp<4>(v.begin(), v.end()) << std::endl;
+
+
 	return 0;
 }
 
