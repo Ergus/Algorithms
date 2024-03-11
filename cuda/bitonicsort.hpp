@@ -17,6 +17,12 @@
 #include <algorithm>
 
 template <typename T>
+__device__ bool __less(const T& a,const T& b)
+{
+	return a < b;
+}
+
+template <typename T, bool (*TComp)(const T& a,const T& b)>
 __global__ void bitonicKernel(T *dev_values, int j, int k)
 {
 	unsigned int i = threadIdx.x + blockDim.x * blockIdx.x;
@@ -28,34 +34,39 @@ __global__ void bitonicKernel(T *dev_values, int j, int k)
 	T tmpixj = dev_values[ixj];
 
 	/* The threads with the lowest ids sort the array. */
-	if (i&k ? tmpi < tmpixj : tmpi > tmpixj)
+	if (i&k ? TComp(tmpi, tmpixj) : TComp(tmpixj, tmpi))
 	{
 		dev_values[i] = tmpixj;
 		dev_values[ixj] = tmpi;
 	}
 }
 
-template <typename T>
-void bitonicSort(T first, T last)
+template <typename T, auto TComp>
+void bitonicSortBase(T first, T last)
 {
-	int *h_data = &*first;
+	using type = typename T::value_type;
+
+	type *h_data = &*first;
 	const size_t size = std::distance(first, last);
 
 	int *d_data;
-	cudaMalloc((void**)&d_data, size * sizeof(int));
-    cudaMemcpy(d_data, h_data, size * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMalloc((void**)&d_data, size * sizeof(type));
+    cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 
 	const int blockdim = 32;
 	const int nblocks = (size + blockdim - 1) / blockdim;
 
-	for (size_t k = 2; k <= size; k <<= 1) {
-		for (size_t j = k>>1; j>0; j >>= 1) {
-			bitonicKernel<<<nblocks, blockdim>>>(d_data, j, k);
-		}
-	}
+	for (size_t k = 2; k <= size; k <<= 1)
+		for (size_t j = k>>1; j>0; j >>= 1)
+			bitonicKernel<type, TComp><<<nblocks, blockdim>>>(d_data, j, k);
 
-	cudaMemcpy(h_data, d_data, size * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_data, d_data, size * sizeof(type), cudaMemcpyDeviceToHost);
 	cudaFree(d_data);
 }
 
 
+template <typename T>
+void bitonicSort(T start, T end)
+{
+	bitonicSortBase<T, __less<typename T::value_type>>(start, end);
+}
