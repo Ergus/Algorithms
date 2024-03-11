@@ -1,2 +1,5 @@
 *.json
 build*
+GPATH
+GRTAGS
+GTAGS
