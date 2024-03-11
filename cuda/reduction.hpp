@@ -169,7 +169,7 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 	fun<<<nblocks, blockdim, sharedSize>>>(d_data, size, d_result[0]);
 
 	if (nblocks > 1)
-	{	
+	{
 		size = nblocks;
 		nblocks = (size + step - 1) / step;
 
@@ -186,7 +186,7 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 			++count;
 		}
 	}
-	
+
 	type result;
 	cudaMemcpy(&result, d_result[count % 2], sizeof(type), cudaMemcpyDeviceToHost);
 

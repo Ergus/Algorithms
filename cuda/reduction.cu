@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 
     std::uniform_int_distribution<int> dist(0, 1024); // dist(mte)
 
-    std::generate(v.begin(), v.end(), [&dist](){ return 1; });
+    std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
 
 	// std::cout << v << std::endl;
 
