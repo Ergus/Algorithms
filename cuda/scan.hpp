@@ -36,19 +36,20 @@ __global__ void prescan(T *idata, int n, T *odata) {
 	extern __shared__ T temp[];       // allocated on invocation
 
 	int tid = threadIdx.x;
+	int gidx = blockIdx.x * blockDim.x * 2 + tid;
 	int offset = 1; 
 
-	const int tid2 = 2 * tid;
-
-	temp[tid2]     = idata[tid2];       // load input into shared memory
-	temp[tid2 + 1] = idata[tid2 + 1]; 
+	temp[tid]     = idata[gidx];       // load input into shared memory
+	temp[tid + blockDim.x] = idata[gidx + blockDim.x]; 
 		
+	const int tid2 = 2 * tid + 1;
+
 	for (int d = n / 2; d > 0; d /= 2)    // build sum in place up the tree
 	{
 		__syncthreads();
 		if (tid < d) { 
-			int ai = offset * (tid2 + 1) - 1;
-			int bi = offset * (tid2 + 2) - 1;  
+			int ai = offset * tid2 - 1;
+			int bi = offset * (tid2 + 1) - 1;  
 			temp[bi] += temp[ai];
 		}
 		offset *= 2;
@@ -62,8 +63,8 @@ __global__ void prescan(T *idata, int n, T *odata) {
 		offset /= 2;
 		__syncthreads();
 		if (tid < d) {
-			 int ai = offset * (tid2 + 1) - 1;
-			 int bi = offset * (tid2 + 2) - 1; 
+			 int ai = offset * tid2 - 1;
+			 int bi = offset * (tid2 + 1) - 1; 
 			 T t = temp[ai];
 			 temp[ai] = temp[bi];
 			 temp[bi] += t;
@@ -71,8 +72,9 @@ __global__ void prescan(T *idata, int n, T *odata) {
 	}
 	__syncthreads(); 
 
-	odata[tid2]   = temp[tid2];       // write results to device memory
-	odata[tid2 + 1] = temp[tid2 + 1];
+	// Write output out
+	odata[gidx] = temp[tid];
+	odata[gidx + blockDim.x] = temp[tid + blockDim.x]; 
 }
 
 
@@ -94,7 +96,7 @@ void exclusive_scan(T start, T end)
 	type *o_data;
 	cudaMalloc((void**)&o_data, size * sizeof(type));
 
-	const size_t sharedSize = blockdim * sizeof(type);
+	const size_t sharedSize = 2 * blockdim * sizeof(type);
 
 	prescan<<<nblocks, blockdim, sharedSize>>>(d_data, size, o_data);
 
