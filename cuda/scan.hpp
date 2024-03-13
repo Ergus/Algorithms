@@ -31,34 +31,40 @@
 
 
 template <typename T>
-__global__ void prescan(T *idata, int n, T *odata) {
-
+__global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
+{
 	extern __shared__ T temp[];       // allocated on invocation
 
-	int tid = threadIdx.x;
-	int gidx = blockIdx.x * blockDim.x * 2 + tid;
-	int offset = 1; 
+	int dataSize = 2 * blockDim.x;
 
-	temp[tid]     = idata[gidx];       // load input into shared memory
-	temp[tid + blockDim.x] = idata[gidx + blockDim.x]; 
-		
+	int tid = threadIdx.x;
+	int gidx1 = blockIdx.x * dataSize + tid;
+	int gidx2 = gidx1 + blockDim.x;
+
+	temp[tid]              = (gidx1 < n ? idata[gidx1] : 0);       // load input into shared memory
+	temp[tid + blockDim.x] = (gidx2 < n ? idata[gidx2] : 0);
+
+	__syncthreads();
+	const T localLast = temp[2 * blockDim.x - 1];
+
 	const int tid2 = 2 * tid + 1;
 
-	for (int d = n / 2; d > 0; d /= 2)    // build sum in place up the tree
+	int offset = 1; 
+	for (int d = dataSize / 2; d > 0; d /= 2)    // build sum in place up the tree
 	{
 		__syncthreads();
 		if (tid < d) { 
 			int ai = offset * tid2 - 1;
-			int bi = offset * (tid2 + 1) - 1;  
+			int bi = offset * (tid2 + 1) - 1;
 			temp[bi] += temp[ai];
 		}
 		offset *= 2;
 	}
 
 	if (tid == 0)
-		temp[n - 1] = 0;                  // clear the last element  
+		temp[2 * blockDim.x - 1] = 0;                  // clear the last element  
 
-	for (int d = 1; d < n; d *= 2)        // traverse down tree & build scan
+	for (int d = 1; d < dataSize; d *= 2)        // traverse down tree & build scan
 	{
 		offset /= 2;
 		__syncthreads();
@@ -73,8 +79,30 @@ __global__ void prescan(T *idata, int n, T *odata) {
 	__syncthreads(); 
 
 	// Write output out
-	odata[gidx] = temp[tid];
-	odata[gidx + blockDim.x] = temp[tid + blockDim.x]; 
+	if (gidx1 < n)
+		odata[gidx1] = temp[tid];
+	
+	if (gidx2 < n)
+		odata[gidx2] = temp[tid + blockDim.x];	
+
+	if (tmp != 0 && tid == blockDim.x - 1)
+		tmp[blockIdx.x] = temp[dataSize - 1] + localLast;
+}
+
+template <typename T>
+__global__ void postscan(T *odata, int n, const T *tmp) {
+
+	int tid = threadIdx.x;
+	int gidx = blockIdx.x * blockDim.x * 2 + tid;
+
+	const T value = tmp[blockIdx.x];
+
+	// Write output out
+	if (gidx < n)
+		odata[gidx] += value;
+
+	if (gidx + blockDim.x < n)
+		odata[gidx + blockDim.x] += value; 
 }
 
 
@@ -96,9 +124,24 @@ void exclusive_scan(T start, T end)
 	type *o_data;
 	cudaMalloc((void**)&o_data, size * sizeof(type));
 
-	const size_t sharedSize = 2 * blockdim * sizeof(type);
+	type *o_tmp;
+	cudaMalloc((void**)&o_tmp, nblocks * sizeof(type));
 
-	prescan<<<nblocks, blockdim, sharedSize>>>(d_data, size, o_data);
+	const size_t sharedSize = 2 * blockdim * sizeof(type);
+	prescan<<<nblocks, blockdim, sharedSize>>>(d_data, size, o_data, o_tmp);
+
+	{  // This is to scan the indices. so far we can only scan once this
+	   // subarray because we cannot generate another subvector array. without
+	   // allocating it. That's why this is intended to be a single block
+		size_t blockdim2 = (nblocks + blockdim - 1) / blockdim * blockdim;
+
+		if (blockdim2 <= 1024)
+			prescan<<<1, blockdim2, sharedSize>>>(o_tmp, nblocks, o_tmp);
+		else 
+			std::cerr << "Error the array to reduce is too big.. not supported yet" << std::endl;
+	}
+	
+	postscan<<<nblocks, blockdim>>>(o_data, size, o_tmp);
 
 	cudaMemcpy(h_data, o_data, size * sizeof(type), cudaMemcpyDeviceToHost);
 }

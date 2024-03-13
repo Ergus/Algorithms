@@ -18,6 +18,8 @@ cmake_minimum_required(VERSION 3.5)
 
 project(ArgParserC LANGUAGES CXX CUDA)
 
+set(CMAKE_VERBOSE_MAKEFILE on)
+
 include_directories(h hpp)
 
 add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)

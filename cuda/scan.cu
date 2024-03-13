@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
     std::uniform_int_distribution<int> dist(0, 20); // dist(mte)
 
-    std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
+    std::generate(v.begin(), v.end(), [&dist](){ return 1; });
 
 	std::cout << v << std::endl;
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 	std::cout << v1 << std::endl;
 
 	std::vector<int> v2(v);
-	exclusive_scan<64>(v2.begin(), v2.end());
+	exclusive_scan<32>(v2.begin(), v2.end());
 	std::cout << v2 << std::endl;
 
 	return 0;
