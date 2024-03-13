@@ -107,42 +107,53 @@ __global__ void postscan(T *odata, int n, const T *tmp) {
 
 
 template <int blockdim, typename T>
+void exclusive_scan_internal(T *data, int n, T *o_data)
+{
+	constexpr size_t blockDataDim = 2 * blockdim;
+
+	// When we can scan in a single pass, then that will be more efficient
+	if (n <= 1024) {		
+		const int blockdim2 = (n + blockDataDim - 1) / blockDataDim * blockdim;
+		prescan<<<1, blockdim2, 2 * blockdim2 * sizeof(T)>>>(data, n, o_data);
+	} else {
+		const int nblocks = (n + blockDataDim - 1) / blockDataDim;
+		T *o_tmp;
+		cudaMalloc((void**)&o_tmp, nblocks * sizeof(T));
+
+		const size_t sharedSize = blockDataDim * sizeof(T);
+
+		prescan<<<nblocks, blockdim, sharedSize>>>(data, n, o_data, o_tmp);
+
+		exclusive_scan_internal<blockdim, T>(o_tmp, nblocks, o_tmp);
+
+		postscan<<<nblocks, blockdim>>>(o_data, n, o_tmp);
+
+		cudaFree(o_tmp);
+	}
+}
+
+
+template <int blockdim, typename T>
 void exclusive_scan(T start, T end)
 {
 	using type = typename T::value_type;
 
-	size_t size = std::distance(start, end);
-
-	type *h_data = &*start;
+	type *data = &*start;
+	const size_t size = std::distance(start, end);
 
 	type *d_data;
 	cudaMalloc((void**)&d_data, size * sizeof(type));
-    cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_data, data, size * sizeof(type), cudaMemcpyHostToDevice);
 
-	size_t nblocks = (size + blockdim - 1) / blockdim;
-
+	// The output data on the device (remove this latter)
 	type *o_data;
 	cudaMalloc((void**)&o_data, size * sizeof(type));
 
-	type *o_tmp;
-	cudaMalloc((void**)&o_tmp, nblocks * sizeof(type));
+	exclusive_scan_internal<blockdim, type>(d_data, size, o_data);
 
-	const size_t sharedSize = 2 * blockdim * sizeof(type);
-	prescan<<<nblocks, blockdim, sharedSize>>>(d_data, size, o_data, o_tmp);
+	cudaMemcpy(data, o_data, size * sizeof(type), cudaMemcpyDeviceToHost);
 
-	{  // This is to scan the indices. so far we can only scan once this
-	   // subarray because we cannot generate another subvector array. without
-	   // allocating it. That's why this is intended to be a single block
-		size_t blockdim2 = (nblocks + blockdim - 1) / blockdim * blockdim;
-
-		if (blockdim2 <= 1024)
-			prescan<<<1, blockdim2, sharedSize>>>(o_tmp, nblocks, o_tmp);
-		else 
-			std::cerr << "Error the array to reduce is too big.. not supported yet" << std::endl;
-	}
-	
-	postscan<<<nblocks, blockdim>>>(o_data, size, o_tmp);
-
-	cudaMemcpy(h_data, o_data, size * sizeof(type), cudaMemcpyDeviceToHost);
+	cudaFree(d_data);
+	cudaFree(o_data);
 }
 

@@ -35,17 +35,17 @@ int main(int argc, char **argv)
 
     std::uniform_int_distribution<int> dist(0, 20); // dist(mte)
 
-    std::generate(v.begin(), v.end(), [&dist](){ return 1; });
+    std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
 
-	std::cout << v << std::endl;
+	//std::cout << v << std::endl;
 
 	std::vector<int> v1(v.size());
 	std::exclusive_scan(v.begin(), v.end(), v1.begin(), 0);
-	std::cout << v1 << std::endl;
+	std::cout << std::vector<int>(v1.end() - 10, v1.end()) << std::endl;
 
 	std::vector<int> v2(v);
 	exclusive_scan<32>(v2.begin(), v2.end());
-	std::cout << v2 << std::endl;
+	std::cout << std::vector<int>(v2.end() - 10, v2.end()) << std::endl;
 
 	return 0;
 }

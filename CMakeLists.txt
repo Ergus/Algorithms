@@ -28,6 +28,8 @@ include_directories("submodules/ArgParserC")
 file(GLOB CPP_SOURCES cpp/*.cpp)
 file(GLOB CPP_SOURCES cuda/*.cu)
 
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
+
 enable_testing()
 
 foreach (INPUT_FILE ${CPP_SOURCES})
