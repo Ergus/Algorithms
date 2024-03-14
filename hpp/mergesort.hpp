@@ -135,7 +135,13 @@ namespace my {
 		std::inplace_merge(first, middle, last);
 	}
 
-	// parallel
+	/**
+	   Parallel divide and conquer inplace MergeSort implementation
+
+	   @param[in] first Iterator to the range begin
+	   @param[in] last Iterator to the range begin
+	   @param[in] nThreads Max number of threads to use
+	*/
 	template<class Iter>
 	void mergeSortStdParallel(Iter first, Iter last, size_t nThreads = 0)
 	{
@@ -173,7 +179,5 @@ namespace my {
 		}
 
 		std::inplace_merge(first, middle, last);
-
-		std::cout << counter << std::endl;
 	}
 }
