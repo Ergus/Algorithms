@@ -26,13 +26,13 @@ add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
 
 file(GLOB CPP_SOURCES cpp/*.cpp)
-file(GLOB CPP_SOURCES cuda/*.cu)
+file(GLOB CUDA_SOURCES cuda/*.cu)
 
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
 enable_testing()
 
-foreach (INPUT_FILE ${CPP_SOURCES})
+foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
     target_link_libraries (${OUTPUT_FILE} argparser)
