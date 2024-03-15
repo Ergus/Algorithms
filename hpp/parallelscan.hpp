@@ -48,7 +48,7 @@ namespace my {
 		size_t acc = 0;
 		for (size_t i = 0; i < nThreads; ++i)
 		{
-			size_t size = quot + (rem < i);
+			size_t size = quot + (i < rem);
 			result[i] = {acc, size};
 			acc += size;
 		}
@@ -124,7 +124,6 @@ namespace my {
 			count[i] = count[i - 1] + *(ofirst + lastIdx) + *(first + lastIdx);
 		}
 
-
 		for (size_t i = 0; i < nThreads; ++i) {
 			threads[i] = std::thread(
 				std::for_each<Oter, std::function<void(typename Oter::reference)>>,
@@ -139,8 +138,6 @@ namespace my {
 
 		for (auto &thread : threads)
 			thread.join();
-
-
 	}
 
 }
