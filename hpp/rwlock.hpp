@@ -24,9 +24,8 @@
 class ReadWriteLock {
 public:
     void ReadLock() {
-
+		int expected = 0;
         while (true) {
-            int expected = 0;
             if ((expected = lock_.load(std::memory_order_acquire)) >= 0
 			    && lock_.compare_exchange_weak(expected, expected + 1,
 				                               std::memory_order_acquire,
@@ -44,11 +43,10 @@ public:
 
     void WriteLock() {
 		while (true) {
-            int expected = 0;
-            if ((expected = lock_.load(std::memory_order_acquire)) == 0
-			    && lock_.compare_exchange_weak(expected, -1,
-				                               std::memory_order_acquire,
-				                               std::memory_order_relaxed))
+			int expected = 0;
+            if (lock_.compare_exchange_weak(expected, -1,
+			                                std::memory_order_acquire,
+			                                std::memory_order_relaxed))
                 break;
 
             std::this_thread::yield();
