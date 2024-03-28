@@ -16,7 +16,7 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-project(ArgParserC LANGUAGES CXX CUDA)
+project(AlgorithmMisc LANGUAGES CXX CUDA)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
