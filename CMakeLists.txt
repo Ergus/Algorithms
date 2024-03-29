@@ -25,16 +25,10 @@ include_directories(h hpp)
 add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
 
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory("submodules/googletest" EXCLUDE_FROM_ALL)
-include_directories("submodules/googletest/googletest/include")
-
 file(GLOB CPP_SOURCES cpp/*.cpp)
 file(GLOB CUDA_SOURCES cuda/*.cu)
 
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
-
-enable_testing()
 
 foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
