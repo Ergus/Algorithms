@@ -17,9 +17,10 @@
 
 #include <fstream>
 #include <vector>
+#include <cassert>
 
 /**
-   Overload the << operator
+   Overload the << operator for vectors
 */
 template <typename T>
 std::ostream& operator<<(std::ostream &out, const std::vector<T> &arr)
@@ -31,3 +32,11 @@ std::ostream& operator<<(std::ostream &out, const std::vector<T> &arr)
 
 	return out;
 }
+
+#define myassert(cond) {										\
+		if (!(cond)) {											\
+			fprintf(stderr, "%s%s:%u Assertion `%s' failed.\n", \
+			        __func__, __FILE__, __LINE__, #cond);		\
+			exit(EXIT_FAILURE);									\
+		}														\
+	}

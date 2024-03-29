@@ -27,6 +27,7 @@ int main(int argc, char **argv)
 {
 	argparser::init(argc, argv);
 	const size_t size = argparser::cl<int>("array_size");
+	const size_t printlimit = argparser::cl<int>("print_limit", 512); // Limit to print the vectors
 
 	std::vector<int> v(size);
 
@@ -37,15 +38,24 @@ int main(int argc, char **argv)
 
     std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
 
-	//std::cout << v << std::endl;
+	if (size <= printlimit)
+		std::cout << "Initial:\n" << v << std::endl;
 
+	// host scan
 	std::vector<int> v1(v.size());
 	std::exclusive_scan(v.begin(), v.end(), v1.begin(), 0);
-	std::cout << std::vector<int>(v1.end() - 10, v1.end()) << std::endl;
 
+	if (size <= printlimit)
+		std::cout << "C++:\n"<< v1 << std::endl;
+
+	// device scan
 	std::vector<int> v2(v);
 	exclusive_scan<32>(v2.begin(), v2.end());
-	std::cout << std::vector<int>(v2.end() - 10, v2.end()) << std::endl;
+
+	if (size <= printlimit)
+		std::cout << "Cuda:\n" << v2 << std::endl;
+
+	myassert(v1 == v2);
 
 	return 0;
 }

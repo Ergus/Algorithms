@@ -40,23 +40,44 @@ int main(int argc, char **argv)
 
 	// std::cout << v << std::endl;
 
-	std::cout << "C++: " << std::reduce(v.begin(), v.end()) << std::endl;
+	int cpp = std::reduce(v.begin(), v.end());
+	std::cout << "C++: " << cpp << std::endl;
 
-	std::cout << "CudaBasic: " << reduceBasic(v.begin(), v.end()) << std::endl;
+	int basic = reduceBasic(v.begin(), v.end());
+	std::cout << "CudaBasic: " << basic << std::endl;
+	myassert(basic == cpp);
 
-	std::cout << "Cuda1: " << reduceN<1>(v.begin(), v.end()) << std::endl;
-	std::cout << "Cuda2: " << reduceN<2>(v.begin(), v.end()) << std::endl;
+	int cuda1 = reduceN<1>(v.begin(), v.end());
+	std::cout << "Cuda1: " << cuda1 << std::endl;
+	myassert(cuda1 == basic)
 
-	std::cout << "Cuda3: " << reduceN<3>(v.begin(), v.end()) << std::endl;
-	std::cout << "Cuda4: " << reduceN<4>(v.begin(), v.end()) << std::endl;
+	int cuda2 = reduceN<2>(v.begin(), v.end());
+	std::cout << "Cuda2: " << cuda2 << std::endl;
+	myassert(cuda2 == basic);
 
+	int cuda3 = reduceN<3>(v.begin(), v.end());
+	std::cout << "Cuda3: " << cuda3 << std::endl;
+	myassert(cuda3 == basic);
 
-	std::cout << "Cuda1Warp: " << reduceWarp<1>(v.begin(), v.end()) << std::endl;
-	std::cout << "Cuda2Warp: " << reduceWarp<2>(v.begin(), v.end()) << std::endl;
+	int cuda4 = reduceN<4>(v.begin(), v.end());
+	std::cout << "Cuda4: " << cuda4 << std::endl;
+	myassert(cuda4 == basic);
 
-	std::cout << "Cuda3Warp: " << reduceWarp<3>(v.begin(), v.end()) << std::endl;
-	std::cout << "Cuda4Warp: " << reduceWarp<4>(v.begin(), v.end()) << std::endl;
+	int warp1 = reduceWarp<1>(v.begin(), v.end());
+	std::cout << "Cuda1Warp: " << warp1 << std::endl;
+	myassert(warp1 == basic);
 
+	int warp2 = reduceWarp<2>(v.begin(), v.end());
+	std::cout << "Cuda2Warp: " << warp2 << std::endl;
+	myassert(warp2 == basic);
+
+	int warp3 = reduceWarp<3>(v.begin(), v.end());
+	std::cout << "Cuda3Warp: " << warp3 << std::endl;
+	myassert(warp3 == basic);
+
+	int warp4 = reduceWarp<4>(v.begin(), v.end());
+	std::cout << "Cuda4Warp: " << warp4 << std::endl;
+	myassert(warp4 == basic);
 
 	return 0;
 }

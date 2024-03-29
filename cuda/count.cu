@@ -44,14 +44,20 @@ int main(int argc, char **argv)
     std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
 
 	// std::cout << v << std::endl;
+	int cpp = std::count(v.begin(), v.end(), 5);
+	std::cout << "C++: " <<  cpp << std::endl;
 
-	std::cout << "C++: " << std::count(v.begin(), v.end(), 5) << std::endl;
+	int countWarp1 = countWarp<1, int, is_five>(v.begin(), v.end());
+	std::cout << "Cuda1: " << countWarp1 << std::endl;
+	myassert(countWarp1 == cpp);
 
-	std::cout << "Cuda1: " << countWarp<1, int, is_five>(v.begin(), v.end()) << std::endl;
+	int countWarp2 = countWarp<2, int, is_five>(v.begin(), v.end());
+	std::cout << "Cuda2: " << countWarp2 << std::endl;
+	myassert(countWarp2 == cpp);
 
-	std::cout << "Cuda2: " << countWarp<2, int, is_five>(v.begin(), v.end()) << std::endl;
-
-	std::cout << "Cuda4: " << countWarp<4, int, is_five>(v.begin(), v.end()) << std::endl;
+	int countWarp4 = countWarp<4, int, is_five>(v.begin(), v.end());
+	std::cout << "Cuda4: " << countWarp4 << std::endl;
+	myassert(countWarp4 == cpp);
 
 	return 0;
 }

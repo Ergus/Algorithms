@@ -17,6 +17,7 @@
 
 #include <argparser.hpp>
 #include <iostream>
+#include <algorithm>
 
 #include "utils.h"
 #include "bitonicsort.hpp"
@@ -31,7 +32,8 @@ int main(int argc, char **argv)
 	std::iota(v.begin(), v.end(), 1);
 	std::shuffle(v.begin(), v.end(), std::mt19937{std::random_device{}()});
 
-	std::cout << v << std::endl;
+	if (size <= printlimit)
+		std::cout << v << std::endl;
 
 	std::vector<int> v1 = v;
 	std::sort(v1.begin(), v1.end());
@@ -45,7 +47,9 @@ int main(int argc, char **argv)
 	if (size <= printlimit)
 		std::cout << v2 << std::endl;
 
-	assert(v1 == v2);
+	assert(std::is_sorted(v2.begin(), v2.end()));
+	myassert(v1.size() == v2.size());
+	myassert(v1 == v2);
 
 	return 0;
 }

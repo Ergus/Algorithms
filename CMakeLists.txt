@@ -38,3 +38,18 @@ foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
 
     target_link_libraries (${OUTPUT_FILE} argparser)
 endforeach()
+
+enable_testing()
+
+# These need to be a power of two
+foreach(X 32 64 512 2048 131072 4194304 67108864)
+    add_test(NAME "bitonicsort_${X}" COMMAND $<TARGET_FILE:bitonicsort> ${X})
+endforeach()
+
+foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
+    add_test(NAME "count_${X}" COMMAND $<TARGET_FILE:count> ${X})
+endforeach()
+
+foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
+    add_test(NAME "reduction_${X}" COMMAND $<TARGET_FILE:reduction> ${X})
+endforeach()
