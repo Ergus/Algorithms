@@ -35,6 +35,9 @@ enable_testing()
 foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
+    # no pass arquitecture flags to compiler
+    set_property(TARGET ${OUTPUT_FILE} PROPERTY CUDA_ARCHITECTURES OFF)
+
     target_link_libraries (${OUTPUT_FILE} argparser)
 
     add_test(NAME ${OUTPUT_FILE} COMMAND ${OUTPUT_FILE} 40)
