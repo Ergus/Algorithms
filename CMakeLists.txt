@@ -25,6 +25,10 @@ include_directories(h hpp)
 add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
 
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+add_subdirectory("submodules/googletest" EXCLUDE_FROM_ALL)
+include_directories("submodules/googletest/googletest/include")
+
 file(GLOB CPP_SOURCES cpp/*.cpp)
 file(GLOB CUDA_SOURCES cuda/*.cu)
 
@@ -39,6 +43,4 @@ foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     set_property(TARGET ${OUTPUT_FILE} PROPERTY CUDA_ARCHITECTURES OFF)
 
     target_link_libraries (${OUTPUT_FILE} argparser)
-
-    add_test(NAME ${OUTPUT_FILE} COMMAND ${OUTPUT_FILE} 40)
 endforeach()

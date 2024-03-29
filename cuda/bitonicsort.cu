@@ -25,6 +25,7 @@ int main(int argc, char **argv)
 {
 	argparser::init(argc, argv);
 	const size_t size = argparser::cl<int>("array_size");
+	const size_t printlimit = argparser::cl<int>("print_limit",512); // Limit to print the vectors
 
 	std::vector<int> v(size);
 	std::iota(v.begin(), v.end(), 1);
@@ -34,11 +35,17 @@ int main(int argc, char **argv)
 
 	std::vector<int> v1 = v;
 	std::sort(v1.begin(), v1.end());
-	std::cout << v1 << std::endl;
+
+	if (size <= printlimit)
+		std::cout << v1 << std::endl;
 
 	std::vector<int> v2 = v;
 	bitonicSort(v2.begin(), v2.end());
-	std::cout << v2 << std::endl;
+
+	if (size <= printlimit)
+		std::cout << v2 << std::endl;
+
+	assert(v1 == v2);
 
 	return 0;
 }
