@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (C) 2024  Jimmy Aguilar Mena
  *
@@ -146,7 +147,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
    @tparam Op cuda kernel basic reduction kernel
  */
 template <int blockdim, int Tfrac, typename T, typename Op>
-typename T::value_type reduceFun(T start, T end, Op fun)
+typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 {
 	typedef typename T::value_type type;
 
@@ -177,13 +178,14 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 
 		while(size > 1)
 		{
-			fun<<<nblocks, blockdim, sharedSize>>>(
+			fun2<<<nblocks, blockdim, sharedSize>>>(
 				d_result[count % 2], size, d_result[(count + 1) % 2]
 			);
 
 			size = nblocks;
 			nblocks = (nblocks + step - 1) / step;
 			++count;
+			cudaDeviceSynchronize();
 		}
 	}
 
@@ -196,6 +198,12 @@ typename T::value_type reduceFun(T start, T end, Op fun)
 	cudaFree(d_result[0]);
 
 	return result;
+}
+
+template <int blockdim, int Tfrac, typename T, typename Op>
+typename T::value_type reduceFun(T start, T end, Op fun)
+{
+	return reduceFun2<blockdim, Tfrac, T, Op>(start, end, fun, fun);
 }
 
 template <typename T>
