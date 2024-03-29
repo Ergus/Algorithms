@@ -145,6 +145,10 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
    threads
    @tparam T iterator type
    @tparam Op cuda kernel basic reduction kernel
+   @param start interval start iterator
+   @param end interval end iterator
+   @param fun basic (first) reduction operation
+   @param fun2 repeated (second) reduction operation
  */
 template <int blockdim, int Tfrac, typename T, typename Op>
 typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
@@ -185,7 +189,6 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 			size = nblocks;
 			nblocks = (nblocks + step - 1) / step;
 			++count;
-			cudaDeviceSynchronize();
 		}
 	}
 
@@ -200,12 +203,22 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	return result;
 }
 
+
+/**
+   Simple wrapper overload for reduceFun2.
+
+   This is only a wrapper around reduceFun2 where fun == fun2. ALl the other
+   parameters are the same than reduceFun2.
+ */
 template <int blockdim, int Tfrac, typename T, typename Op>
 typename T::value_type reduceFun(T start, T end, Op fun)
 {
 	return reduceFun2<blockdim, Tfrac, T, Op>(start, end, fun, fun);
 }
 
+/**
+   Elemental reduction using basic algorithm and 1 element/thread
+ */
 template <typename T>
 typename T::value_type reduceBasic(T start, T end)
 {
@@ -213,6 +226,9 @@ typename T::value_type reduceBasic(T start, T end)
 	return reduceFun<64, 1>(start, end, reduceNKernel<type, 1, __unit<type>, __sum<type>>);
 }
 
+/**
+   Elemental reduction using basic algorithm and N elements/thread
+ */
 template <int N, typename T>
 typename T::value_type reduceN(T start, T end)
 {
@@ -220,6 +236,11 @@ typename T::value_type reduceN(T start, T end)
 	return reduceFun<64, N>(start, end, reduceNKernel<type, N, __unit<type>, __sum<type>>);
 }
 
+/**
+   Elemental reduction using warp optimized algorithm and N elements/thread
+   @tparam N Number of elements to load / thread
+   @tparam T iterator type
+ */
 template <int N, typename T>
 typename T::value_type reduceWarp(T start, T end)
 {

@@ -22,7 +22,7 @@
 /**
    Reduction using registers memory
    @tparam T array type
-   @tparam N Number of elements to load
+   @tparam N Number of elements to load / thread
    @tparam TOp Binary operator device function defining how to perform the adition.
    default: __device__ T __sum(const T& a,const T& b)
    @param[out] output must be numblocks dim
@@ -39,13 +39,16 @@ __global__ void countNWarp(T *data, const size_t size, T* output)
 	if (wid == 0)
 		sharedData[lane] = 0;
 
+	__syncthreads();
+
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 	T localValue = 0;
 
     // Load data into local variable
 	for (int i = 0; i < N; ++i)
 	{
-		unsigned ballot_result = __ballot_sync(0xffffffff, (globalIdx < size) && TOp(data[globalIdx]));
+		bool count = (globalIdx < size) ? TOp(data[globalIdx]) : 0;
+		unsigned ballot_result = __ballot_sync(0xffffffff, count);
 
 		if (lane == 0)
 			localValue += __popc(ballot_result);
@@ -72,6 +75,16 @@ __global__ void countNWarp(T *data, const size_t size, T* output)
         output[blockIdx.x] = localValue;
 }
 
+/**
+   Elemental count using warp optimized algorithm and N elements/thread
+
+   This reduction is intended to work beter for very large datasets and a large
+   value for N.
+   @tparam N Number of elements to load / thread
+   @tparam T array type
+   @tparam TOp binary operation for count criteria TOp(value) must return true
+   for the elements to include in the count.
+ */
 template <int N, typename T, bool (*TOp)(const T&)>
 T countWarp(typename std::vector<T>::iterator start, typename std::vector<T>::iterator end)
 {

@@ -47,9 +47,11 @@ int main(int argc, char **argv)
 
 	std::cout << "C++: " << std::count(v.begin(), v.end(), 5) << std::endl;
 
-	std::cout << "Cuda: " << countWarp<1, int, is_five>(v.begin(), v.end()) << std::endl;
+	std::cout << "Cuda1: " << countWarp<1, int, is_five>(v.begin(), v.end()) << std::endl;
 
+	std::cout << "Cuda2: " << countWarp<2, int, is_five>(v.begin(), v.end()) << std::endl;
 
+	std::cout << "Cuda4: " << countWarp<4, int, is_five>(v.begin(), v.end()) << std::endl;
 
 	return 0;
 }
