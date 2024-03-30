@@ -69,3 +69,6 @@ add_test(NAME "c++_rwlock_1" COMMAND $<TARGET_FILE:mergesort> 5 10 5 10)
 add_test(NAME "c++_rwlock_2" COMMAND $<TARGET_FILE:mergesort> 5 100 5 10)
 add_test(NAME "c++_rwlock_3" COMMAND $<TARGET_FILE:mergesort> 5 10 5 100)
 add_test(NAME "c++_rwlock_4" COMMAND $<TARGET_FILE:mergesort> 5 100 5 100)
+
+add_test(NAME "c++_lrucache_10" COMMAND $<TARGET_FILE:lrucache> 10)
+add_test(NAME "c++_lrucache_20" COMMAND $<TARGET_FILE:lrucache> 20)

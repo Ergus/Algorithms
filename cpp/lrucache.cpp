@@ -25,27 +25,34 @@
 int main(int argc, char **argv)
 {
 	argparser::init(argc, argv);
-	const size_t size = argparser::cl<int>("array_size");
-	const size_t printlimit = argparser::cl<int>("print_limit",512); // Limit to print the vectors
+	const size_t limit = argparser::cl<int>("cache_size");
 
-	lrucache<int, std::string, 10> cache;
+	lrucache<int, std::string> cache(limit);
 	std::cout << "Initial: " << cache << std::endl;
 
-	for (int i = 0; i < 15; ++i) {
+	for (int i = 0; i < limit; ++i) {
 		cache.push(i, std::to_string(i));
-		myassert(cache.size() <= 10);
+		myassert(cache.size() <= limit);
 	}
-	std::cout << "Insert 0->14: " << cache << std::endl;
-	// After inserting 15 elements we must only have 10
-	myassert(cache.size() == 10);
+	std::cout << "Insert 0->limit: " << cache << std::endl;
+	myassert(cache.size() == limit);
 
-	// Assert it removed the older elements when passed 10
+	for (int i = limit; i < limit + 5; ++i) {
+		cache.push(i, std::to_string(i));
+		myassert(cache.size() == limit);
+	}
+	std::cout << "Insert limit-> limit+5: " << cache << std::endl;
+	// After inserting 5 elements more we must only have limit elements
+	myassert(cache.size() == limit);
+
+	// Assert it overrided the first 5 elements
 	for (int i = 0; i < 5; ++i) {
 		myassert(cache.find(i) == cache.end());
 	}
 
-	// Assert that the elements from 5->14 are there
-	for (int i = 5; i < 15; ++i) {
+	// Assert that the elements from 5->limit are there
+	// check all the elements to preserve cache order.
+	for (int i = 5; i < limit + 5; ++i) {
 		myassert(cache.find(i) != cache.end());
 	}
 
@@ -54,25 +61,25 @@ int main(int argc, char **argv)
 	std::cout << "Get 5: " << cache << std::endl;
 	myassert(val == "5");
 
-	// push 1 element to assert 5 is preserved and 6 is removed.
-	cache.push(20, "value");
-	std::cout << "Push 20: " << cache << std::endl;
+	// push 1 more element to assert 5 is preserved and 6 is removed.
+	cache.push(limit + 10, "limit+10");
+	std::cout << "Push limit+10: " << cache << std::endl;
 	myassert(cache.find(5) != cache.end());
 	std::cout << "Find 5: " << cache << std::endl;
 	myassert(cache.find(6) == cache.end());
-	myassert(cache.size() == 10);
+	myassert(cache.size() == limit);
 
 	// Remove the element 7
 	cache.erase(7);
 	std::cout << "Erase 7: " << cache << std::endl;
-	myassert(cache.size() == 9);
+	myassert(cache.size() == limit-1);
 
 	// Remove the element using iterator
 	auto it = cache.find(11);
 	std::cout << "Find 11: " << cache << std::endl;
 	cache.erase(it);
 	std::cout << "Erase it(11): " << cache << std::endl;
-	myassert(cache.size() == 8);
+	myassert(cache.size() == limit-2);
 
 	// Tests iteration
 	for (auto it : cache)

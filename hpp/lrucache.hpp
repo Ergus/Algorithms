@@ -19,13 +19,34 @@
 #include <list>
 #include <ostream>
 
-template<typename K, typename V, size_t limit>
+/**
+   Simple lru cache using std::ordered_map.
+
+   This lru cache uses an std::ordered_map for constant time access and a double
+   linked list to track cache accesses also in constant time.
+   The map nodes include an iterator pointing to the node in the double linked
+   list while the linked list value itself is an iterator to the map node.
+   The cache works by limiting the number of elements the hash table can hold,
+   when a new value is inserted after the limit was reached, then the least
+   recently access element must be deleted to create space for the new one.
+   Tracking the accesses imply that every access need to be tracked in the linked
+   list by removing the corresponding node to the end, so the first elements to
+   be removed are the corresponding to the ones in the front.
+ */
+template<typename K, typename V>
 class lrucache {
 
 	class map_node_t;
 
 	using access_list_t = std::list<typename std::unordered_map<K, map_node_t>::iterator>;
 
+	/**
+	   Wrapper subclass for type
+
+	   We use this because we need to store the value and a pointer (iterator)
+	   to the access cache in order to update access register in constant time.
+	   This class attempts to behave as similar to V as possible.
+	 */
 	class map_node_t {
 		V value;
 		typename access_list_t::iterator access;
@@ -36,11 +57,13 @@ class lrucache {
 		explicit map_node_t(V val) : value(val)
 		{}
 
+		/** Transparent cast operator */
 		operator V() const
 		{
 			return value;
 		}
 
+		/** For easy print overload operator<< */
 		friend std::ostream& operator<<(std::ostream &out, const map_node_t &node)
 		{
 			out << node.value;
@@ -49,51 +72,55 @@ class lrucache {
 
 	};
 
-	std::unordered_map<K, map_node_t> map;
-	access_list_t access;
+	size_t _limit;                           // cache elements limit
+	std::unordered_map<K, map_node_t> _map;  // map to access throw keys
+	access_list_t _access;                   // Maybe we may use mutable here to make other functions const
 
 	void register_access(typename std::unordered_map<K, map_node_t>::iterator map_node)
 	{
-		if (map_node->second.access == access.end())
+		if (map_node->second.access == _access.end())
 			return;
 
-		access.erase(map_node->second.access);
-		map_node->second.access = access.emplace(access.end(), map_node);
+		_access.erase(map_node->second.access);
+		map_node->second.access = _access.emplace(_access.end(), map_node);
 	}
 
 public:
+	using key_type = typename std::unordered_map<K, map_node_t>::key_type;
+	using mapped_type =	V;
+	using value_type = std::pair<const K, map_node_t>;
 
 	using iterator = typename std::unordered_map<K, map_node_t>::iterator;
 	using const_iterator = typename std::unordered_map<K, map_node_t>::const_iterator;
 
-	lrucache()
+	lrucache(size_t limit) : _limit(limit)
 	{
-		map.reserve(limit);
+		_map.reserve(limit);
 	}
 
 	iterator push(K key, V value)
 	{
-		iterator it = map.find(key);
+		iterator it = _map.find(key);
 
 		// Insert a new entry when no key existed.
-		if (it == map.end()) {
+		if (it == _map.end()) {
 			// If the size is already in the limit, update it.
-			if (map.size() == limit)
-				erase(access.front()); // remove lru
+			if (_map.size() == _limit)
+				erase(_access.front()); // remove lru
 
-			assert(map.size() < limit);
-			assert(access.size() < limit);
-			assert(access.size() == map.size());
+			assert(_map.size() < _limit);
+			assert(_access.size() < _limit);
+			assert(_access.size() == _map.size());
 
 			// Ok now insert the new entry and register the insertion as an access.
-			auto tmp = map.emplace(key, map_node_t(value));
+			auto tmp = _map.emplace(key, map_node_t(value));
 			assert(tmp.second); // assert that the key was inserted.
 
 			it = tmp.first;
 
 			auto l = it->second.access;
 
-			it->second.access = access.emplace(access.end(), it);
+			it->second.access = _access.emplace(_access.end(), it);
 		} else {
 			// Update existing entry and register the insertion as an access.
 			it->second.value = value;
@@ -105,22 +132,22 @@ public:
 
 	iterator erase(iterator it)
 	{
-		access.erase(it->second.access);
-		return map.erase(it);
+		_access.erase(it->second.access);
+		return _map.erase(it);
 	}
 
 	iterator erase(iterator first, iterator last)
 	{
 		for (iterator it = first; it != last; ++it)
-			access.erase(it->access);
-		return map.erase(first, last);
+			_access.erase(it->access);
+		return _map.erase(first, last);
 	}
 
 	size_t erase(K key)
 	{
 		iterator it = find(key);
 
-		if (it == map.end())
+		if (it == _map.end())
 			return 0;
 
 		erase(it);
@@ -129,10 +156,10 @@ public:
 
 	iterator find(K key)
 	{
-		iterator it = map.find(key);
+		iterator it = _map.find(key);
 
-		if (it == map.end())
-			return map.end();
+		if (it == _map.end())
+			return _map.end();
 
 		register_access(it);
 		return it;
@@ -142,7 +169,7 @@ public:
 	{
 		iterator it = find(key);
 
-		if (it == map.end())
+		if (it == _map.end())
 			it = push(key, V());
 
 		return it->second.value;
@@ -150,38 +177,45 @@ public:
 
 	size_t size() const
 	{
-		return map.size();
+		return _map.size();
 	}
 
 	size_t max_size() const
 	{
-		return limit;
+		return _limit;
 	}
 
 	const_iterator begin() const
 	{
-		return map.begin();
+		return _map.begin();
 	}
 
 	iterator begin()
 	{
-		return map.begin();
+		return _map.begin();
 	}
 
 	const_iterator end() const
 	{
-		return map.end();
+		return _map.end();
 	}
 
 	iterator end()
 	{
-		return map.end();
+		return _map.end();
 	}
 
+	/**
+	   Overload operator<< to print the elements in access order
+
+	   This prints from least recent to more recent which is very useful to
+	   debug and makes some sense considering that unordered maps have no
+	   defined order.
+	 */
 	friend std::ostream& operator<<(std::ostream &out, const lrucache &cache)
 	{
 		out << "[";
-		for (auto it : cache.access)
+		for (auto it : cache._access)
 			out << "{" << it->first << ";" << it->second << "} ";
 		out << "]";
 
