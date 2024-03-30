@@ -29,7 +29,12 @@
 // temp[ai + bankOffsetA] = g_idata[ai]
 // temp[bi + bankOffsetB] = g_idata[bi] 
 
+/**
+   Initial scan that performs the scan within a block.
 
+   In order to perform the scan this kernel reads 2 values/ thread from global
+   memory. With offset = blockDim.x and compy then into shared-memory.
+ */
 template <typename T>
 __global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
 {
@@ -70,7 +75,7 @@ __global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
 		__syncthreads();
 		if (tid < d) {
 			 int ai = offset * tid2 - 1;
-			 int bi = offset * (tid2 + 1) - 1; 
+			 int bi = offset * (tid2 + 1) - 1;
 			 T t = temp[ai];
 			 temp[ai] = temp[bi];
 			 temp[bi] += t;
@@ -105,16 +110,41 @@ __global__ void postscan(T *odata, int n, const T *tmp) {
 		odata[gidx + blockDim.x] += value; 
 }
 
+/**
+   Perform exclusive scan for arrays on devide
 
+   This algorith is divided into tww conditions:
+   1. For n < 1024 it basically tries to perform the reduction in a single block
+   with a blockdim power of two and ignores the template parameter blockdim.
+   2. For n < 1024 it starts the scan in three steps:
+
+     a) perform an inclusive Scan/block and return the result of the scan of
+	 every individual block + an array of the total sum of elements in every
+	 block.
+
+	 b) Perform exclusive_scan_internal ovet rhe array os sums to get the global
+	 offset that needs to be applied to every block.
+
+	 c) Perform a postscan step to update all the individual block indices
+	 adding the global offsets.
+*/
 template <int blockdim, typename T>
 void exclusive_scan_internal(T *data, int n, T *o_data)
 {
+	// Assert blockdim is a power of two;
+	static_assert((blockdim & (blockdim - 1)) == 0);
+
 	constexpr size_t blockDataDim = 2 * blockdim;
 
 	// When we can scan in a single pass, then that will be more efficient
-	if (n <= 1024) {		
-		const int blockdim2 = (n + blockDataDim - 1) / blockDataDim * blockdim;
-		prescan<<<1, blockdim2, 2 * blockdim2 * sizeof(T)>>>(data, n, o_data);
+	if (n <= 1024) {
+		// Compute a blockdim power of two.
+		const double half = (double) n / 2.0;
+		double exponent = std::ceil(log2(half));
+		int bd = std::pow(2, exponent);
+
+		prescan<<<1, bd, 2 * bd * sizeof(T)>>>(data, n, o_data);
+
 	} else {
 		const int nblocks = (n + blockDataDim - 1) / blockDataDim;
 		T *o_tmp;
@@ -132,7 +162,10 @@ void exclusive_scan_internal(T *data, int n, T *o_data)
 	}
 }
 
-
+/**
+   Cuda exclusive scan with similar format than the std::exclusive_scan
+   @tparam blockdim the blockdim to use in the device
+ */
 template <int blockdim, typename T>
 void exclusive_scan(T start, T end)
 {
