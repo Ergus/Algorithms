@@ -77,15 +77,13 @@ int main(int argc, char **argv) {
 			writers.emplace_back(&ProtectedData<>::Write, &data, i, writes);
     }
 
-    for (std::thread& reader : readers) {
+    for (std::thread& reader : readers)
         reader.join();
-    }
 
-    for (std::thread& writer : writers) {
+    for (std::thread& writer : writers)
         writer.join();
-    }
 
-	assert(data == nWriters * writes);
+	myassert(data == nWriters * writes);
 	std::cout << "Final value: " << data << std::endl;
 
     return 0;
