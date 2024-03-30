@@ -27,28 +27,55 @@ int main(int argc, char **argv)
 {
 	argparser::init(argc, argv);
 	const size_t size = argparser::cl<int>("array_size");
+	const size_t printlimit = argparser::cl<int>("print_limit",512); // Limit to print the vectors
 
 	std::vector<int> v(size);
 	std::iota(v.begin(), v.end(), 1);
 	std::shuffle(v.begin(), v.end(), std::mt19937{std::random_device{}()});
 
-	std::cout << v << std::endl;
+	if (size <= printlimit)
+		std::cout << "Intial:\n" << v << std::endl;
 
-	std::vector<int> vcopy = v;
-	my::mergeSort(vcopy, 0, vcopy.size());
-	std::cout << vcopy << std::endl;
+	std::vector<int> stl = v;
+	std::sort(stl.begin(), stl.end());
+	if (size <= printlimit)
+		std::cout << "stl:\n" << stl << std::endl;
+	myassert(std::is_sorted(stl.begin(), stl.end())) 
 
-	vcopy = v;
-	my::mergeSortIterator(vcopy.begin(), vcopy.end());
-	std::cout << vcopy << std::endl;
+	std::vector<int> basic = v;
+	my::mergeSort(basic, 0, basic.size());
+	if (size <= printlimit)
+		std::cout << "Basic:\n" << basic << std::endl;
+	myassert(std::is_sorted(basic.begin(), basic.end()));
+	myassert(basic == stl);
 
-	vcopy = v;
-	my::mergeSortStd(vcopy.begin(), vcopy.end());
-	std::cout << vcopy << std::endl;
+	std::vector<int> iter = v;
+	my::mergeSortIterator(iter.begin(), iter.end());
+	if (size <= printlimit)
+		std::cout << "Iter:\n" << iter << std::endl;
+	myassert(std::is_sorted(iter.begin(), iter.end()));
+	myassert(iter == stl);
+	
+	std::vector<int> stdv = v;
+	my::mergeSortStd(stdv.begin(), stdv.end());
+	if (size <= printlimit)
+		std::cout << "Std:\n" << stdv << std::endl;
+	myassert(std::is_sorted(stdv.begin(), stdv.end()));
+	myassert(stdv == stl);
 
-	vcopy = v;
-	my::mergeSortStdParallel(vcopy.begin(), vcopy.end(), 4);
-	std::cout << vcopy << std::endl;
+	std::vector<int> parallel4 = v;
+	my::mergeSortStdParallel(parallel4.begin(), parallel4.end(), 4);
+	if (size <= printlimit)
+		std::cout << "parallel4:\n" << parallel4 << std::endl;
+	myassert(std::is_sorted(parallel4.begin(), parallel4.end()));
+	myassert(parallel4 == stl);
+
+	std::vector<int> parallel8 = v;
+	my::mergeSortStdParallel(parallel8.begin(), parallel8.end(), 4);
+	if (size <= printlimit)
+		std::cout << "parallel4:\n" << parallel8 << std::endl;
+	myassert(std::is_sorted(parallel8.begin(), parallel8.end()));
+	myassert(parallel8 == stl);
 
 	return 0;
 }
