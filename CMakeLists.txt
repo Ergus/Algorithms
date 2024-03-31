@@ -62,13 +62,13 @@ endforeach()
 # C++ test
 foreach(X 32 64 512 2048 131072 4194304)
     # These need to be a power of two
-    add_test(NAME "c++_mergesort_${X}" COMMAND $<TARGET_FILE:mergesort> ${X})
+    add_test(NAME "cpp_mergesort_${X}" COMMAND $<TARGET_FILE:mergesort> ${X})
 endforeach()
 
-add_test(NAME "c++_rwlock_1" COMMAND $<TARGET_FILE:mergesort> 5 10 5 10)
-add_test(NAME "c++_rwlock_2" COMMAND $<TARGET_FILE:mergesort> 5 100 5 10)
-add_test(NAME "c++_rwlock_3" COMMAND $<TARGET_FILE:mergesort> 5 10 5 100)
-add_test(NAME "c++_rwlock_4" COMMAND $<TARGET_FILE:mergesort> 5 100 5 100)
+add_test(NAME "cpp_rwlock_1" COMMAND $<TARGET_FILE:rwlock> 5 10 5 10)
+add_test(NAME "cpp_rwlock_2" COMMAND $<TARGET_FILE:rwlock> 5 100 5 10)
+add_test(NAME "cpp_rwlock_3" COMMAND $<TARGET_FILE:rwlock> 5 10 5 100)
+add_test(NAME "cpp_rwlock_4" COMMAND $<TARGET_FILE:rwlock> 5 100 5 100)
 
-add_test(NAME "c++_lrucache_10" COMMAND $<TARGET_FILE:lrucache> 10)
-add_test(NAME "c++_lrucache_20" COMMAND $<TARGET_FILE:lrucache> 20)
+add_test(NAME "cpp_lrucache_10" COMMAND $<TARGET_FILE:lrucache> 10)
+add_test(NAME "cpp_lrucache_20" COMMAND $<TARGET_FILE:lrucache> 20)
