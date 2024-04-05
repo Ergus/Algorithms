@@ -33,8 +33,9 @@ public:
 			rwLock.ReadLock();
 			std::cout << "Reader " << id << " reads shared data: " << sharedData << std::endl;
 			rwLock.ReadUnlock();
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::microseconds(10));
 		}
+		std::this_thread::sleep_for(std::chrono::microseconds(10));
 	}
 
 	void Write(int id, size_t nWrites) {
@@ -42,9 +43,10 @@ public:
 			rwLock.WriteLock();
 			++sharedData;
 			std::cout << "Writer " << id << " writes shared data: " << sharedData << std::endl;
+			std::this_thread::sleep_for(std::chrono::microseconds(10));
 			rwLock.WriteUnlock();
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
+		std::this_thread::sleep_for(std::chrono::microseconds(1));
 	}
 
 	operator T() const
