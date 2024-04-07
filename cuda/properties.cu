@@ -17,18 +17,16 @@ int main() {
 
 		printf("  Compute Capability minor-major: %d-%d\n", prop.minor, prop.major);
 		printf("  Warp-size: %d\n", prop.warpSize);
-
-		printf("\n  ===================================================\n");
-		printf("  Memory Clock Rate (MHz): %d\n", prop.memoryClockRate/1024);
-		printf("  Memory Bus Width (bits): %d\n", prop.memoryBusWidth);
-		printf("  Peak Memory Bandwidth (GB/s): %.1f\n", 2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
-		printf("  minor-major: %d-%d\n", prop.minor, prop.major);
-		printf("  Warp-size: %d\n", prop.warpSize);
+		int* mgs = prop.maxGridSize;
+		printf("  Max Grid Size: [%d,%d;%d]\n", mgs[0], mgs[1], mgs[2]);
 
 		printf("\n  ===================================================\n");
 		printf("  Total Global memory (Gbytes) %.1f\n",(float)(prop.totalGlobalMem)/1024.0/1024.0/1024.0);
 		printf("  Total Const memory (Kbytes) %.1f\n",(float)(prop.totalConstMem)/1024.0);
-		printf("  l2CacheSize (Mbytes) %.1f\n", (float)(prop.l2CacheSize)/1024.0/1024.0);
+		printf("  Total l2 Cache Size (Mbytes) %.1f\n", (float)(prop.l2CacheSize)/1024.0/1024.0);
+		printf("  Memory Clock Rate (MHz): %d\n", prop.memoryClockRate/1024);
+		printf("  Memory Bus Width (bits): %d\n", prop.memoryBusWidth);
+		printf("  Peak Memory Bandwidth (GB/s): %.1f\n", 2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
 
 		printf("\n  ===================================================\n");
 		printf("  Max threads per block %d\n", prop.maxThreadsPerBlock);
