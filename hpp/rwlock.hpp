@@ -23,42 +23,43 @@
 
 class ReadWriteLock {
 public:
-    void ReadLock() {
+	void ReadLock() {
 		int expected = 0;
-        while (true) {
-            if ((expected = lock_.load(std::memory_order_acquire)) >= 0
-			    && lock_.compare_exchange_weak(expected, expected + 1,
+		while (true) {
+			if ((expected = _lock.load(std::memory_order_acquire)) >= 0
+			    && _lock.compare_exchange_weak(expected, expected + 1,
 				                               std::memory_order_acquire,
 				                               std::memory_order_relaxed))
-                break;
+				break;
 
-            std::this_thread::yield();
-        }
-    }
+			std::this_thread::yield();
+		}
+	}
 
-    void ReadUnlock() {
-		assert(lock_.load() > 0);
-        lock_.fetch_sub(1, std::memory_order_release);
-    }
+	void ReadUnlock() {
+		assert(_lock.load() > 0);
+		_lock.fetch_sub(1, std::memory_order_release);
+	}
 
-    void WriteLock() {
+	void WriteLock() {
 		while (true) {
 			int expected = 0;
-            if (lock_.compare_exchange_weak(expected, -1,
-			                                std::memory_order_acquire,
-			                                std::memory_order_relaxed))
-                break;
+			if (_lock.load() == expected // Local Spinning in write lock too
+			    && _lock.compare_exchange_weak(expected, -1,
+				                               std::memory_order_acquire,
+				                               std::memory_order_relaxed))
+				break;
 
-            std::this_thread::yield();
-        }
-    }
+			std::this_thread::yield();
+		}
+	}
 
-    void WriteUnlock() {
-		assert(lock_.load() == -1);
-        lock_.store(0, std::memory_order_release);
-    }
+	void WriteUnlock() {
+		assert(_lock.load() == -1);
+		_lock.store(0, std::memory_order_release);
+	}
 
 private:
 	// Negative value indicates a write lock, positive indicates the number of read locks.
-    std::atomic<int> lock_{0};
+	std::atomic<int> _lock{0};
 };
