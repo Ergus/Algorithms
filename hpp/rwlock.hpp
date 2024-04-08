@@ -21,18 +21,27 @@
 #include <thread>
 #include <cassert>
 
+#include <emmintrin.h> // _mm_pause
+
+
 class ReadWriteLock {
 public:
 	void ReadLock() {
+		int counter = 0;
 		int expected = 0;
 		while (true) {
 			if ((expected = _lock.load(std::memory_order_acquire)) >= 0
 			    && _lock.compare_exchange_weak(expected, expected + 1,
 				                               std::memory_order_acquire,
 				                               std::memory_order_relaxed))
-				break;
+				return;
 
-			std::this_thread::yield();
+			if (counter++ < 16) {
+				// _mm_pause(); // Not standard C++... on windows it is, not sure on linux
+			} else {
+				std::this_thread::yield();
+				counter = 0;
+			}
 		}
 	}
 
@@ -42,15 +51,21 @@ public:
 	}
 
 	void WriteLock() {
+		int counter = 0;
 		while (true) {
 			int expected = 0;
 			if (_lock.load() == expected // Local Spinning in write lock too
 			    && _lock.compare_exchange_weak(expected, -1,
 				                               std::memory_order_acquire,
 				                               std::memory_order_relaxed))
-				break;
+				return;
 
-			std::this_thread::yield();
+			if (counter++ < 16) {
+				// _mm_pause(); // Not standard C++... on windows it is, not sure on linux
+			} else {
+				std::this_thread::yield();
+				counter = 0;
+			}
 		}
 	}
 
