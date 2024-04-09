@@ -56,7 +56,7 @@ private:
 			// If there is not _next, then there are two possibilities.
 			// 1. This is the last thread in the queue
 			// 2. There is a race condition because there is a value in the
-			// queue not set in _next yet
+			// queue not set in _next YET
             if (_next.load(std::memory_order_relaxed) == nullptr) {
 
                 if (helper* expected = this;

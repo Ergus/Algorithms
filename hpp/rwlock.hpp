@@ -24,6 +24,16 @@
 #include <emmintrin.h> // _mm_pause
 
 
+/**
+   Read-Write lock simpler code
+
+   This lock uses one atomic to declare the lock when the atomic is negative it
+   means that there is a running write operation. When it is positive then there
+   are some threads reading the variable.
+
+   This lock does not take into account the order of the operations, so the
+   write lock cannot be taken until all the read operations finish.
+ */
 class ReadWriteLock {
 public:
 	void ReadLock() {
