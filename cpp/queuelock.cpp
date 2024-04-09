@@ -18,7 +18,7 @@
 #include <utils.h>
 
 #include <argparser.hpp>
-#include "queue_lock.hpp"
+#include "queuelock.hpp"
 
 #include <iostream>
 #include <vector>
@@ -53,7 +53,7 @@ public:
 		if (count > 0)
 			myassert(readed == ids[count++]);
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		qLock.Unlock();
 	}
 

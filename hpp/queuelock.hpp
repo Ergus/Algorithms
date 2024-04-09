@@ -36,7 +36,8 @@
    the other thread releases the lock.
 
    On the other hand When a new thread attempts to take the lock it only
-   modifies the atomic "_next" of its predecessor.
+   modifies the atomic "_next" of its predecessor. That's why in general this
+   lock tends to be faster than the simpler fair lock.
  */
 template<int I>
 class QueueLock_t {

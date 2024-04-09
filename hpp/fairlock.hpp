@@ -34,7 +34,7 @@ public:
 		int ticket = _lock.fetch_add(1);
 
 		while (_current != ticket) {
-			if (ticket - _current > 1)
+			if (ticket - _current > 4)
 				std::this_thread::yield();
 		}
 	}
