@@ -79,6 +79,10 @@ add_test(NAME "cpp_lrucache_10" COMMAND $<TARGET_FILE:lrucache> 10)
 add_test(NAME "cpp_lrucache_20" COMMAND $<TARGET_FILE:lrucache> 20)
 add_test(NAME "cpp_lrucache_40" COMMAND $<TARGET_FILE:lrucache> 40)
 
-add_test(NAME "cpp_queue_lock_10" COMMAND $<TARGET_FILE:queue_lock> 10)
-add_test(NAME "cpp_queue_lock_20" COMMAND $<TARGET_FILE:queue_lock> 20)
-add_test(NAME "cpp_queue_lock_40" COMMAND $<TARGET_FILE:queue_lock> 40)
+add_test(NAME "cpp_queuelock_10" COMMAND $<TARGET_FILE:queuelock> 10)
+add_test(NAME "cpp_queuelock_20" COMMAND $<TARGET_FILE:queuelock> 20)
+add_test(NAME "cpp_queuelock_40" COMMAND $<TARGET_FILE:queuelock> 40)
+
+add_test(NAME "cpp_fair_lock_10" COMMAND $<TARGET_FILE:fairlock> 10)
+add_test(NAME "cpp_fair_lock_20" COMMAND $<TARGET_FILE:fairlock> 20)
+add_test(NAME "cpp_fair_lock_40" COMMAND $<TARGET_FILE:fairlock> 40)

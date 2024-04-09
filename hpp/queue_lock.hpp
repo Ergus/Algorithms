@@ -22,6 +22,22 @@
 #include <cassert>
 #include <stdexcept>
 
+/**
+   Queue lock
+
+   This is a fair queue lock based in a fifo queue. Every thread that attempts
+   to take the lock will add itself to the waiting queue in the lock. When a
+   thread finalizes it looks for its successor in the queue and "notifies" that
+   it can start. This lock is completely fair, but due to its complexity it
+   produces more overhead.
+
+   However there are a couple of optimizations still going on. Like the threads
+   check for a thread-local atomic, that is only modified by other thread when
+   the other thread releases the lock.
+
+   On the other hand When a new thread attempts to take the lock it only
+   modifies the atomic "_next" of its predecessor.
+ */
 template<int I>
 class QueueLock_t {
 private:
