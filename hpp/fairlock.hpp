@@ -40,7 +40,7 @@ public:
 	}
 
 	void Unlock() {
-		++_current;
+		_current = _current + 1;
 	}
 
 private:

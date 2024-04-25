@@ -17,10 +17,8 @@
 
 #include <cstdlib>
 #include <array>
-#include <atomic>
 #include <mutex>
 #include <condition_variable>
-#include <thread>
 
 template <typename T, size_t N = 1024>
 class queue {
