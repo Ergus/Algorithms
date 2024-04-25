@@ -16,9 +16,12 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-project(AlgorithmMisc LANGUAGES CXX CUDA)
+project(AlgorithmMisc LANGUAGES CXX)
+
+include(CheckLanguage)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_CXX_STANDARD 20)
 
 include_directories(h hpp)
 
@@ -26,38 +29,21 @@ add_subdirectory("submodules/ArgParserC" EXCLUDE_FROM_ALL)
 include_directories("submodules/ArgParserC")
 
 file(GLOB CPP_SOURCES cpp/*.cpp)
-file(GLOB CUDA_SOURCES cuda/*.cu)
-
-set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
 foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
-    # no pass arquitecture flags to compiler
-    set_property(TARGET ${OUTPUT_FILE} PROPERTY CUDA_ARCHITECTURES OFF)
-
     target_link_libraries (${OUTPUT_FILE} argparser)
 endforeach()
 
 enable_testing()
 
-# Cuda tests
-foreach(X 32 64 512 2048 131072 4194304 67108864)
-    # These need to be a power of two
-    add_test(NAME "cuda_bitonicsort_${X}" COMMAND $<TARGET_FILE:bitonicsort> ${X})
-endforeach()
-
-foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_count_${X}" COMMAND $<TARGET_FILE:count> ${X})
-endforeach()
-
-foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_reduction_${X}" COMMAND $<TARGET_FILE:reduction> ${X})
-endforeach()
-
-foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_scan_${X}" COMMAND $<TARGET_FILE:scan> ${X})
-endforeach()
+check_language(CUDA)
+if(CMAKE_CUDA_COMPILER)
+    add_subdirectory(cuda)
+else()
+    message(STATUS "No Cuda support")
+endif()
 
 # C++ test
 foreach(X 32 64 512 2048 131072 4194304)
