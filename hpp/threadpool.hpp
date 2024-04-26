@@ -102,9 +102,8 @@ private:
 		worker_t(const worker_t &other) = delete;  // because of the tread
 		worker_t(const worker_t &&other) = delete;  // because of the atomic
 
-		worker_t(threadpool_t &pool)
-			: _pool(pool),
-			  _status(status_t::sleep),
+		worker_t(size_t id, threadpool_t &pool)
+			: _id(id), _pool(pool),
 			  _thread(&worker_t::workerFunction, this)
 		{}
 
@@ -121,33 +120,44 @@ private:
 		}
 
 	private:
-		threadpool_t &_pool;
-		std::atomic<status_t> _status;
+		const size_t _id;
+		std::atomic<status_t> _status {status_t::sleep};
 		std::thread _thread;
-
+		threadpool_t &_pool;
 
 		void workerFunction()
 		{
-			std::thread::id this_id = std::this_thread::get_id();
-
+			size_t voidloops = 0;
 			while (true) {
 
 				if (_status.load() == status_t::sleep) {
 					_status.wait(status_t::sleep);
 				}
 
-				for (std::unique_ptr<task_t> task = _pool.getTask();
+				size_t executed = 0;
+				for (std::unique_ptr<task_t> task = _pool.getTask(this);
 					 task;
-					 task = _pool.getTask()
+					 task = _pool.getTask(this)
 				) {
 					task->evaluate();
+					++executed;
 				}
 
 				if (_status.load() == status_t::finished) {
 					break;
 				}
+
+				if (executed == 0)
+				{
+					++voidloops = 0;
+					if (voidloops < 10)
+						std::this_thread::yield();
+					else {
+						_status.store(status_t::sleep);
+						voidloops = 0;
+					}
+				}
 			}
-			std::cout << "Exiting" << std::endl;
 		}
 	};
 
@@ -169,9 +179,9 @@ private:
 
 public:
 
-	std::unique_ptr<task_t> getTask()
+	std::unique_ptr<task_t> getTask(const worker_t *worker)
 	{
-		return std::move(_readyQueue.get());
+		return _readyQueue.get();
 	}
 
 	template<typename ...Params>
@@ -198,7 +208,7 @@ public:
 		: _ncores(ncores)
 	{
 		for (size_t i = 0; i < _ncores; ++i)
-			_pool.emplace_back(std::make_unique<worker_t>(*this));
+			_pool.emplace_back(std::make_unique<worker_t>(i, *this));
 	}
 
 	~threadpool_t()
