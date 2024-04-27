@@ -20,13 +20,10 @@
 #include <atomic>
 #include <utility>
 #include <vector>
-#include <future>
 #include <functional>
-
+#include <mutex>
 #include <deque>
 #include <utility>
-
-#include <iostream>
 
 template<typename T>
 class readyQueue_t {
@@ -46,11 +43,10 @@ public:
 		return std::move(ret);
 	}
 
-	size_t push(T &&in)
+	void push(T &&in)
 	{
 		std::lock_guard<std::mutex> lk(_mutex);
 		_queue.push_back(std::forward<T>(in));
-		return _queue.size();
 	}
 };
 
@@ -102,7 +98,7 @@ private:
 		worker_t(const worker_t &other) = delete;  // because of the tread
 		worker_t(const worker_t &&other) = delete;  // because of the atomic
 
-		worker_t(size_t id, threadpool_t &pool)
+		worker_t(size_t id, threadpool_t *pool)
 			: _id(id), _pool(pool),
 			  _thread(&worker_t::workerFunction, this)
 		{}
@@ -123,29 +119,31 @@ private:
 		const size_t _id;
 		std::atomic<status_t> _status {status_t::sleep};
 		std::thread _thread;
-		threadpool_t &_pool;
+		threadpool_t * const _pool;
 
 		void workerFunction()
 		{
 			size_t voidloops = 0;
 			while (true) {
 
-				if (_status.load() == status_t::sleep) {
+				if (_status.load() == status_t::sleep)
 					_status.wait(status_t::sleep);
-				}
 
 				size_t executed = 0;
-				for (std::unique_ptr<task_t> task = _pool.getTask(this);
+				for (std::unique_ptr<task_t> task = _pool->getTask(this);
 					 task;
-					 task = _pool.getTask(this)
+					 task = _pool->getTask(this)
 				) {
 					task->evaluate();
 					++executed;
+					// When the counter is zero notify in case some thread is
+					// waiting.
+					if (_pool->_taskCounter.fetch_sub(1) == 1)
+						_pool->_taskCounter.notify_one();
 				}
 
-				if (_status.load() == status_t::finished) {
+				if (_status.load() == status_t::finished)
 					break;
-				}
 
 				if (executed == 0)
 				{
@@ -176,43 +174,23 @@ private:
 	const size_t _ncores;
 	std::vector<std::unique_ptr<worker_t>> _pool;
 	readyQueue_t<std::unique_ptr<task_t>> _readyQueue;
+	std::atomic<size_t> _taskCounter;
+
+	friend class worker_t;
 
 public:
-
-	std::unique_ptr<task_t> getTask(const worker_t *worker)
-	{
-		return _readyQueue.get();
-	}
-
-	template<typename ...Params>
-	void pushTask(std::function<void(Params...)> func, Params ...params)
-	{
-		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
-		const size_t size = _readyQueue.push(std::move(taskPtr));
-
-		// The queue was empty, so wake up every one.
-		if (size == 1)
-			forAll(
-				[](worker_t &worker) {
-					worker.setStatus(worker_t::status_t::running);
-				}
-			);
-	}
-
-	void pushTask(std::function<void()> func)
-	{
-		pushTask<>(func);
-	}
 
 	threadpool_t(size_t ncores = std::thread::hardware_concurrency())
 		: _ncores(ncores)
 	{
-		for (size_t i = 0; i < _ncores; ++i)
-			_pool.emplace_back(std::make_unique<worker_t>(i, *this));
+		_pool.reserve(ncores);
+		this->resize(_ncores);
 	}
 
 	~threadpool_t()
 	{
+		this->taskWait();
+
 		forAll(
 			[](worker_t &worker) {
 				worker.setStatus(worker_t::status_t::finished);
@@ -226,4 +204,48 @@ public:
 		);
 	}
 
+	size_t size() const
+	{
+		return _pool.size();
+	}
+
+	void resize(size_t size)
+	{
+		size_t oldSize = _pool.size();
+		_pool.resize(size);
+
+		for (int i = oldSize; i < size; ++i)
+			_pool.emplace_back(std::make_unique<worker_t>(i, this));
+	}
+
+	std::unique_ptr<task_t> getTask(const worker_t *worker)
+	{
+		return _readyQueue.get();
+	}
+
+
+	void pushTask(std::function<void()> func)
+	{
+		pushTask<>(func);
+	}
+
+	template<typename ...Params>
+	void pushTask(std::function<void(Params...)> func, Params ...params)
+	{
+		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
+		_readyQueue.push(std::move(taskPtr));
+
+		// The queue was empty, so wake up every one.
+		if (++_taskCounter == 1)
+			forAll(
+				[](worker_t &worker) {
+					worker.setStatus(worker_t::status_t::running);
+				}
+			);
+	}
+
+	void taskWait()
+	{
+		_taskCounter.wait(0);
+	}
 };
