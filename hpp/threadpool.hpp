@@ -147,8 +147,7 @@ private:
 
 				if (executed == 0)
 				{
-					++voidloops = 0;
-					if (voidloops < 10)
+					if (++voidloops < 10)
 						std::this_thread::yield();
 					else {
 						_status.store(status_t::sleep);
@@ -159,19 +158,35 @@ private:
 		}
 	};
 
-	void forAll(std::function<void(worker_t &worker)> fun)
+	using funWorker_t = std::function<void(worker_t &worker)>;
+
+	void forSome(size_t start, size_t end, funWorker_t fun)
 	{
-		for (std::unique_ptr<worker_t> &worker : _pool)
-			fun(*worker);
+		for (size_t i = start; i < end; ++i)
+			fun(*_pool[i]);
 	}
 
-	void forAll(std::function<void(const worker_t &worker)> fun) const
+	void forSome(size_t start, size_t end, funWorker_t fun) const
 	{
-		for (const std::unique_ptr<worker_t> &worker : _pool)
-			fun(*worker);
+		for (size_t i = start; i < end; ++i)
+			fun(*_pool[i]);
 	}
 
-	const size_t _ncores;
+	void killThreads(size_t start, size_t end)
+	{
+		forSome(start, end,
+		        [](worker_t &worker) {
+					worker.setStatus(worker_t::status_t::finished);
+				}
+		);
+
+		forSome(start, end,
+		        [](worker_t &worker) {
+					worker.join();
+				}
+		);
+	}
+
 	std::vector<std::unique_ptr<worker_t>> _pool;
 	readyQueue_t<std::unique_ptr<task_t>> _readyQueue;
 	std::atomic<size_t> _taskCounter;
@@ -181,27 +196,15 @@ private:
 public:
 
 	threadpool_t(size_t ncores = std::thread::hardware_concurrency())
-		: _ncores(ncores)
 	{
-		_pool.reserve(ncores);
-		this->resize(_ncores);
+		this->resize(ncores);
 	}
 
 	~threadpool_t()
 	{
 		this->taskWait();
 
-		forAll(
-			[](worker_t &worker) {
-				worker.setStatus(worker_t::status_t::finished);
-			}
-		);
-
-		forAll(
-			[](worker_t &worker) {
-				worker.join();
-			}
-		);
+		killThreads(0, _pool.size());
 	}
 
 	size_t size() const
@@ -209,13 +212,14 @@ public:
 		return _pool.size();
 	}
 
-	void resize(size_t size)
+	void resize(size_t newSize)
 	{
-		size_t oldSize = _pool.size();
-		_pool.resize(size);
+		const size_t oldSize = _pool.size();
 
-		for (int i = oldSize; i < size; ++i)
-			_pool.emplace_back(std::make_unique<worker_t>(i, this));
+		_pool.resize(newSize);
+
+		for (size_t i = oldSize; i < newSize; ++i)
+			_pool[i] = std::make_unique<worker_t>(i, this);
 	}
 
 	std::unique_ptr<task_t> getTask(const worker_t *worker)
@@ -223,21 +227,16 @@ public:
 		return _readyQueue.get();
 	}
 
-
-	void pushTask(std::function<void()> func)
-	{
-		pushTask<>(func);
-	}
-
-	template<typename ...Params>
-	void pushTask(std::function<void(Params...)> func, Params ...params)
+	template<typename F, typename ...Params>
+	void pushTask(F func, Params ...params)
 	{
 		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
 		_readyQueue.push(std::move(taskPtr));
 
 		// The queue was empty, so wake up every one.
-		if (++_taskCounter == 1)
-			forAll(
+		if (_taskCounter++ == 0)
+			forSome(
+				0, _pool.size(),
 				[](worker_t &worker) {
 					worker.setStatus(worker_t::status_t::running);
 				}
