@@ -164,22 +164,18 @@ private:
 		}
 	};
 
-	using funWorker_t = std::function<void(worker_t &worker)>;
-
-	void forSome(size_t start, size_t end, funWorker_t fun)
-	{
+	void forSome(
+		size_t start, size_t end, std::function<void(worker_t &worker)> fun
+	) {
 		for (size_t i = start; i < end; ++i)
 			fun(*_pool[i]);
 	}
 
-	void forSome(size_t start, size_t end, funWorker_t fun) const
-	{
+	void forSome(
+		size_t start, size_t end, std::function<void(const worker_t &worker)> fun
+	) const {
 		for (size_t i = start; i < end; ++i)
 			fun(*_pool[i]);
-	}
-
-	void requestKillThreads(size_t start, size_t end)
-	{
 	}
 
 	/** Get a task to execute; intended to be called from the workers only. */
@@ -196,9 +192,12 @@ private:
 
 public:
 
-	threadpool_t(size_t ncores = std::thread::hardware_concurrency())
+	/** Thread pool constructor.
+	 @param size Initial size of the pool.
+	*/
+	threadpool_t(size_t size = std::thread::hardware_concurrency())
 	{
-		this->resize(ncores);
+		this->resize(size);
 	}
 
 	~threadpool_t()
@@ -206,11 +205,16 @@ public:
 		this->resize(0);
 	}
 
+	/** Return the number of threads in the pool. */
 	size_t size() const
 	{
 		return _pool.size();
 	}
 
+	/** Resize the thread pool.
+		Construct or destruct threads to resize the pool.
+		@param newSize New desired size for the pool.
+	 */
 	void resize(size_t newSize)
 	{
 		const size_t oldSize = _pool.size();
