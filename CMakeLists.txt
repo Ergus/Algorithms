@@ -51,6 +51,11 @@ foreach(X 32 64 512 2048 131072 4194304)
     add_test(NAME "cpp_mergesort_${X}" COMMAND $<TARGET_FILE:mergesort> ${X})
 endforeach()
 
+foreach(X 512 2048 2050 2090 2091 131072 4194304)
+    # These need to be a power of two
+    add_test(NAME "cpp_parallelscan_${X}" COMMAND $<TARGET_FILE:parallelscan> ${X})
+endforeach()
+
 add_test(NAME "cpp_rwlock_1" COMMAND $<TARGET_FILE:rwlock> 10 100 10 100)
 add_test(NAME "cpp_rwlock_2" COMMAND $<TARGET_FILE:rwlock> 10 1000 10 100)
 add_test(NAME "cpp_rwlock_3" COMMAND $<TARGET_FILE:rwlock> 10 100 10 1000)

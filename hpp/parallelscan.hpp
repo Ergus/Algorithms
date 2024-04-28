@@ -51,7 +51,7 @@ namespace my {
 			return;
 		}
 
-		const std::vector<std::array<size_t,2>> ranges = computeRanges(size, nThreads);
+		const std::vector<size_t> ranges = computeRanges(size, nThreads);
 
 		std::vector<std::thread> threads(nThreads);
 
@@ -59,9 +59,9 @@ namespace my {
 		for (size_t i = 0; i < nThreads; ++i) {
 			threads[i] = std::thread(
 				std::exclusive_scan<Iter, Oter, type>,
-				first + ranges[i][0],
-				first + ranges[i][0] + ranges[i][1],
-				ofirst + ranges[i][0],
+				first + ranges[i],
+				first + ranges[i + 1],
+				ofirst + ranges[i],
 				type()
 			);
 		}
@@ -72,15 +72,15 @@ namespace my {
 		// Scan the last indices for arrays
 		std::vector<size_t> count(nThreads);
 		for (size_t i = 1; i < nThreads; ++i) {
-			const size_t lastIdx = ranges[i - 1][0] + ranges[i - 1][1] - 1;
+			const size_t lastIdx = ranges[i] - 1;
 			count[i] = count[i - 1] + *(ofirst + lastIdx) + *(first + lastIdx);
 		}
 
 		for (size_t i = 0; i < nThreads; ++i) {
 			threads[i] = std::thread(
 				std::for_each<Oter, std::function<void(typename Oter::reference)>>,
-				ofirst + ranges[i][0],
-				ofirst + ranges[i][0] + ranges[i][1],
+				ofirst + ranges[i],
+				ofirst + ranges[i + 1],
 				[value = count[i]](typename Oter::reference v)
 				{
 					v += value;

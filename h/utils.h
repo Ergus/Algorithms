@@ -67,19 +67,19 @@ std::vector<std::array<Iter, 2>> computeRanges(Iter start, Iter end, size_t nThr
    @param[in] nThreads Number of subgroups to distribute into.
    @return a vector with pairs <start,size> for every interval.
 */
-std::vector<std::array<size_t,2>> computeRanges(size_t size, size_t nThreads)
+std::vector<size_t> computeRanges(size_t size, size_t nThreads)
 {
 	const size_t quot = size / nThreads;
 	const size_t rem = size % nThreads;
 
-	std::vector<std::array<size_t,2>> result(nThreads);
+	std::vector<size_t> result(nThreads + 1);
 	size_t acc = 0;
 	for (size_t i = 0; i < nThreads; ++i)
 	{
-		size_t size = quot + (i < rem);
-		result[i] = {acc, size};
-		acc += size;
+		result[i] = acc;
+		acc += (quot + (i < rem));
 	}
+	result[nThreads] = acc;
 
 	return result;
 }

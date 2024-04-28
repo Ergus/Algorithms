@@ -40,8 +40,9 @@ int main(int argc, char **argv)
 
 	std::vector<int> v1(size);
 	my::exclusiveScanParallel(v.begin(), v.end(), v1.begin(), 6);
-
 	std::cout << v1 << std::endl;
+
+	myassert(v0 == v1);
 
 	return 0;
 }
