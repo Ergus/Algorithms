@@ -110,8 +110,8 @@ private:
 		worker_t(const worker_t &other) = delete;  // because of the tread
 		worker_t(const worker_t &&other) = delete;  // because of the atomic
 
-		worker_t(size_t id, threadpool_t *pool)
-			: _id(id), _pool(pool),
+		worker_t(size_t id, threadpool_t &pool)
+			: _id(id), _parentPool(pool),
 			  _thread(&worker_t::workerFunction, this)
 		{}
 
@@ -132,15 +132,17 @@ private:
 			_status.notify_one();
 		}
 
+		const size_t get_id() const { return _id; };
+
 	private:
 		std::atomic<status_t> _status {status_t::sleep};
 		const size_t _id;
 		std::thread _thread;
-		threadpool_t * const _pool;
+		threadpool_t &_parentPool;
 
 		void workerFunction()
 		{
-			thisThreadWorker = this;
+			_thisThreadWorker = this;
 
 			size_t voidloops = 0;
 			while (true) {
@@ -149,16 +151,16 @@ private:
 					_status.wait(status_t::sleep);
 
 				size_t executed = 0;
-				for (std::unique_ptr<task_t> task = _pool->getTask(this);
+				for (std::unique_ptr<task_t> task = _parentPool.getTask(this);
 					 task;
-					 task = _pool->getTask(this)
+					 task = _parentPool.getTask(this)
 				) {
 					task->evaluate();
 					++executed;
 					// When the counter is zero notify in case some thread is
 					// waiting.
-					if (_pool->_taskCounter.fetch_sub(1) == 1)
-						_pool->_taskCounter.notify_one();
+					if (_parentPool._taskCounter.fetch_sub(1) == 1)
+						_parentPool._taskCounter.notify_one();
 				}
 
 				if (_status.load() == status_t::finished)
@@ -201,7 +203,7 @@ private:
 	std::vector<std::unique_ptr<worker_t>> _pool;
 	scheduler_t<std::unique_ptr<task_t>> _scheduler;
 	std::atomic<size_t> _taskCounter {0};
-	static thread_local worker_t *thisThreadWorker;
+	static thread_local worker_t *_thisThreadWorker;
 
 public:
 
@@ -222,6 +224,11 @@ public:
 	size_t size() const
 	{
 		return _pool.size();
+	}
+
+	static const worker_t &get_worker() 
+	{
+		return *_thisThreadWorker;
 	}
 
 	/** Resize the thread pool.
@@ -245,7 +252,7 @@ public:
 
 		// newSize > oldSize
 		for (size_t i = oldSize; i < newSize; ++i)
-			_pool[i] = std::make_unique<worker_t>(i, this);
+			_pool[i] = std::make_unique<worker_t>(i, *this);
 	}
 
 	/** Push/create a new task.
@@ -331,4 +338,4 @@ namespace my {
 }
 
 // Initialize static member of class Box
-thread_local threadpool_t::worker_t *threadpool_t::thisThreadWorker = nullptr;
+thread_local threadpool_t::worker_t *threadpool_t::_thisThreadWorker = nullptr;
