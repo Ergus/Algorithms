@@ -203,7 +203,6 @@ public:
 	~threadpool_t()
 	{
 		this->taskWait();
-
 		killThreads(0, _pool.size());
 	}
 
@@ -216,8 +215,13 @@ public:
 	{
 		const size_t oldSize = _pool.size();
 
+		// When newSize < oldSize
+		if (newSize < oldSize)
+			killThreads(newSize, oldSize);
+
 		_pool.resize(newSize);
 
+		// newSize > oldSize
 		for (size_t i = oldSize; i < newSize; ++i)
 			_pool[i] = std::make_unique<worker_t>(i, this);
 	}
