@@ -16,10 +16,8 @@
  */
 
 #include <thread>
-#include <utility>
 #include <utils.h>
 #include <argparser.hpp>
-#include <chrono>
 #include <iostream>
 
 #include "threadpool.hpp"
@@ -31,9 +29,9 @@ void myfunc(size_t i)
 	std::thread::id tid = std::this_thread::get_id();
 	size_t wid = threadpool_t::get_worker().get_id();
 
-	std::cout << "Thread: " << tid << " : " << wid << " start" << std::endl;
+	std::cout << "Function: " << tid << " : " << wid << " start" << std::endl;
 	std::this_thread::sleep_for(500ms);
-	std::cout << "Thread: " << tid << " : " << wid << " end" << std::endl;;
+	std::cout << "Function: " << tid << " : " << wid << " end" << std::endl;;
 }
 
 int main(int argc, char *argv[])
@@ -45,6 +43,20 @@ int main(int argc, char *argv[])
 
 	for (size_t i = 0; i < ntasks; ++i)
 		pool.pushTask(myfunc, i);
+
+	for (size_t i = 0; i < ntasks; ++i)
+		pool.pushTask(
+			[](size_t i){
+					size_t wid = threadpool_t::get_worker().get_id();
+
+					std::cout << "Lambda: " << wid  << " start" << std::endl;
+					std::this_thread::sleep_for(500ms);
+					std::cout << "Lambda: " << wid << " end" << std::endl;;
+			}, i);
+
+	std::cout << "----- Start Waiting -----" << std::endl;
+	pool.taskWait();
+	std::cout << "----- End Waiting -----" << std::endl;
 
     return 0;
 }

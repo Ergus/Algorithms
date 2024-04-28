@@ -24,6 +24,7 @@
 #include <mutex>
 #include <deque>
 #include <utility>
+#include <condition_variable>
 
 #include <cassert>
 
@@ -155,7 +156,7 @@ private:
 					// When the counter is zero notify in case some thread is
 					// waiting.
 					if (_parentPool._taskCounter.fetch_sub(1) == 1)
-						_parentPool._taskCounter.notify_one();
+						_parentPool._twCondVar.notify_one();
 				}
 
 				if (_status.load() == status_t::finished)
@@ -194,11 +195,14 @@ private:
 		return _scheduler.get();
 	}
 
-
 	std::vector<std::unique_ptr<worker_t>> _pool;
 	scheduler_t<std::unique_ptr<task_t>> _scheduler;
 	std::atomic<size_t> _taskCounter {0};
 	static thread_local worker_t *_thisThreadWorker;
+
+	// For taskwait
+	std::mutex _twMutex;
+	std::condition_variable _twCondVar;
 
 public:
 
@@ -293,8 +297,15 @@ public:
 	/** Block this thread until all the submitted tasks are executed. */
 	void taskWait()
 	{
-		if (_taskCounter.load() > 0)
-			_taskCounter.wait(0);
+		if (_taskCounter.load() == 0)
+			return;
+
+		// this implementation is save cause the _taskCounter is modified
+		// outside the lock, but it is atomic AND what it notifies is precisely
+		// that this is the last thread that attempts to modify this var
+		// (because there are not more tasks in the queue.)
+		std::unique_lock lk(_twMutex);
+		_twCondVar.wait(lk, [&]{return _taskCounter.load() == 0;});
 	}
 };
 
