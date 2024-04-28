@@ -75,14 +75,9 @@ public:
 		task_t(task_t&) = delete;
 		task_t() = default;
 
-		task_t(std::function<void(void)> func)
-		{
-			_function = func;
-		}
-
-		template<typename ...Params>
-		task_t(std::function<Params...> func, Params& ...params)
-			: task_t(std::bind(func, std::forward<Params>(params)...))
+		template<typename F, typename ...Params>
+		task_t(F&& func, Params&& ...params)
+			: _function(std::bind(std::forward<F>(func), std::forward<Params>(params)...))
 		{
 		}
 
@@ -261,10 +256,12 @@ public:
 		@param params Function arguments
 	*/
 	template<typename F, typename ...Params>
-	void pushTask(F func, Params ...params)
+	void pushTask(F&& func, Params&& ...params)
 	{
-		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
-		_scheduler.push(std::move(taskPtr));
+		_scheduler.push(
+			std::make_unique<task_t>(std::forward<F>(func),
+			                         std::forward<Params>(params)...)
+		);
 		++_taskCounter;
 
 		// The queue was empty, so wake up every one.

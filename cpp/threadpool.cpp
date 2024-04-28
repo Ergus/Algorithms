@@ -26,13 +26,14 @@
 
 using namespace std::chrono_literals;
 
-void myfunc()
+void myfunc(size_t i)
 {
-	std::thread::id this_id = std::this_thread::get_id();
+	std::thread::id tid = std::this_thread::get_id();
+	size_t wid = threadpool_t::get_worker().get_id();
 
-	std::cout << "Thread: " << this_id << " start" << std::endl;
-	std::this_thread::sleep_for(2000ms);
-	std::cout << "Thread: " << this_id << " end" << std::endl;
+	std::cout << "Thread: " << tid << " : " << wid << " start" << std::endl;
+	std::this_thread::sleep_for(500ms);
+	std::cout << "Thread: " << tid << " : " << wid << " end" << std::endl;;
 }
 
 int main(int argc, char *argv[])
@@ -40,14 +41,10 @@ int main(int argc, char *argv[])
 	argparser::init(argc, argv);
 	const size_t ntasks = argparser::cl<size_t>("N Tasks");
 
-	{
-		threadpool_t pool(4);
+	threadpool_t pool(4);
 
-		for (size_t i = 0; i < ntasks; ++i)
-		{
-			pool.pushTask(myfunc);
-		}
-	}
+	for (size_t i = 0; i < ntasks; ++i)
+		pool.pushTask(myfunc, i);
 
     return 0;
 }
