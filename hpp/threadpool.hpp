@@ -63,6 +63,13 @@ public:
 	}
 };
 
+/** Thread pool class.
+	This is a basic thread pool class implemented using only basic C++-20
+	features.  While the current compilers actually support parallel execution
+	policies, some of them have issues supporting parallel execution ones. This
+	is a sort of poor guy parallel execution implementation just for demonstration
+	purposes.
+*/
 class threadpool_t {
 
 public:
@@ -119,6 +126,11 @@ private:
 				_thread.join();
 		}
 
+		/** Set the worker status.
+			Change the status variable when its value is different from the
+			current one.
+			@param status New status to check and set.
+		 */
 		void setStatus(status_t status)
 		{
 			if (_status.load() == status)
@@ -128,7 +140,8 @@ private:
 			_status.notify_one();
 		}
 
-		const size_t get_id() const { return _id; };
+		/** Get the worker unique id */
+		size_t get_id() const { return _id; };
 
 	private:
 		std::atomic<status_t> _status {status_t::sleep};
@@ -136,6 +149,11 @@ private:
 		std::thread _thread;
 		threadpool_t &_parentPool;
 
+		/** Spin function executed by the workers.
+			This function will run contiguously until the thread is notified
+			to die. The function also performs some sleep and wake_up when there
+			is not work to do.
+		 */
 		void workerFunction()
 		{
 			_thisThreadWorker = this;
@@ -164,6 +182,8 @@ private:
 
 				if (executed == 0)
 				{
+					// Iterate 10 times more before sleeping, just in case there
+					// is some delay adding new tasks.
 					if (++voidloops < 10)
 						std::this_thread::yield();
 					else {
