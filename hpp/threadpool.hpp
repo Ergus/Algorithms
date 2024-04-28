@@ -50,6 +50,16 @@ public:
 		std::lock_guard<std::mutex> lk(_mutex);
 		_queue.push_back(std::forward<T>(in));
 	}
+
+	void push(std::vector<T> &input)
+	{
+		std::lock_guard<std::mutex> lk(_mutex);
+		_queue.insert(
+			_queue.end(),
+			std::make_move_iterator(input.begin()),
+			std::make_move_iterator(input.end())
+		);
+	}
 };
 
 class threadpool_t {
@@ -115,6 +125,9 @@ private:
 
 		void setStatus(status_t status)
 		{
+			if (_status.load() == status)
+				return;
+
 			_status.store(status);
 			_status.notify_one();
 		}
@@ -245,15 +258,32 @@ public:
 	{
 		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
 		_scheduler.push(std::move(taskPtr));
+		++_taskCounter;
 
 		// The queue was empty, so wake up every one.
-		if (_taskCounter++ == 0)
-			forSome(
-				0, _pool.size(),
-				[](worker_t &worker) {
-					worker.setStatus(worker_t::status_t::running);
-				}
-			);
+		forSome(
+			0, _pool.size(),
+			[](worker_t &worker) {
+				worker.setStatus(worker_t::status_t::running);
+			}
+		);
+	}
+
+	/** Push/create a new task.
+		If the task que was empty, then this function wakes up the other workers.
+	*/
+	void pushTasks(std::vector<std::unique_ptr<task_t>> &&tasks)
+	{
+		_scheduler.push(tasks);
+		_taskCounter += tasks.size();
+
+		// The queue was empty, so wake up every one.
+		forSome(
+			0, _pool.size(),
+			[](worker_t &worker) {
+				worker.setStatus(worker_t::status_t::running);
+			}
+		);
 	}
 
 	/** Block this thread until all the submitted tasks are executed. */
@@ -263,6 +293,42 @@ public:
 			_taskCounter.wait(0);
 	}
 };
+
+namespace my {
+
+	template<class ForwardIt1, class ForwardIt2, class UnaryOp >
+	ForwardIt2 transform(
+		threadpool_t& pool,
+		ForwardIt1 first1, ForwardIt1 last1,
+		ForwardIt2 d_first, UnaryOp unary_op
+	) {
+		const size_t nThreads = pool.size();
+
+		std::vector<size_t> ranges
+			= computeRanges(std::distance(first1, last1), nThreads);
+
+		std::vector<std::unique_ptr<threadpool_t::task_t>> tasks(nThreads);
+
+		ForwardIt1 it1 = first1;
+		ForwardIt2 it2 = d_first;
+
+		for (size_t i = 0; i < nThreads; ++i) {
+
+			size_t step = ranges[i + 1] - ranges[i];
+
+			tasks[i] = std::make_unique<threadpool_t::task_t>(
+				std::transform<ForwardIt1, ForwardIt2, UnaryOp>,
+				it1, it1 += step,
+				it2,
+				unary_op
+			);
+
+			it2 += step;
+		}
+
+		pool.pushTasks(std::move(tasks));
+	}
+}
 
 // Initialize static member of class Box
 thread_local threadpool_t::worker_t *threadpool_t::thisThreadWorker = nullptr;
