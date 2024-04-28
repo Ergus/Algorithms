@@ -25,8 +25,10 @@
 #include <deque>
 #include <utility>
 
+#include <cassert>
+
 template<typename T>
-class readyQueue_t {
+class scheduler_t {
 	std::mutex _mutex;
 	std::deque<T> _queue;
 
@@ -103,26 +105,30 @@ private:
 			  _thread(&worker_t::workerFunction, this)
 		{}
 
+		~worker_t()
+		{
+			assert(_status.load() == status_t::finished);
+
+			if (_thread.joinable())
+				_thread.join();
+		}
+
 		void setStatus(status_t status)
 		{
 			_status.store(status);
 			_status.notify_one();
 		}
 
-		void join()
-		{
-			if (_thread.joinable())
-				_thread.join();
-		}
-
 	private:
-		const size_t _id;
 		std::atomic<status_t> _status {status_t::sleep};
+		const size_t _id;
 		std::thread _thread;
 		threadpool_t * const _pool;
 
 		void workerFunction()
 		{
+			thisThreadWorker = this;
+
 			size_t voidloops = 0;
 			while (true) {
 
@@ -172,26 +178,21 @@ private:
 			fun(*_pool[i]);
 	}
 
-	void killThreads(size_t start, size_t end)
+	void requestKillThreads(size_t start, size_t end)
 	{
-		forSome(start, end,
-		        [](worker_t &worker) {
-					worker.setStatus(worker_t::status_t::finished);
-				}
-		);
-
-		forSome(start, end,
-		        [](worker_t &worker) {
-					worker.join();
-				}
-		);
 	}
 
-	std::vector<std::unique_ptr<worker_t>> _pool;
-	readyQueue_t<std::unique_ptr<task_t>> _readyQueue;
-	std::atomic<size_t> _taskCounter;
+	/** Get a task to execute; intended to be called from the workers only. */
+	std::unique_ptr<task_t> getTask(const worker_t *worker)
+	{
+		return _scheduler.get();
+	}
 
-	friend class worker_t;
+
+	std::vector<std::unique_ptr<worker_t>> _pool;
+	scheduler_t<std::unique_ptr<task_t>> _scheduler;
+	std::atomic<size_t> _taskCounter {0};
+	static thread_local worker_t *thisThreadWorker;
 
 public:
 
@@ -202,8 +203,7 @@ public:
 
 	~threadpool_t()
 	{
-		this->taskWait();
-		killThreads(0, _pool.size());
+		this->resize(0);
 	}
 
 	size_t size() const
@@ -215,9 +215,14 @@ public:
 	{
 		const size_t oldSize = _pool.size();
 
+		this->taskWait();
+
 		// When newSize < oldSize
 		if (newSize < oldSize)
-			killThreads(newSize, oldSize);
+			forSome(newSize, oldSize,
+			        [](worker_t &worker) {
+						worker.setStatus(worker_t::status_t::finished);
+					});
 
 		_pool.resize(newSize);
 
@@ -226,16 +231,16 @@ public:
 			_pool[i] = std::make_unique<worker_t>(i, this);
 	}
 
-	std::unique_ptr<task_t> getTask(const worker_t *worker)
-	{
-		return _readyQueue.get();
-	}
-
+	/** Push/create a new task.
+		If the task que was empty, then this function wakes up the other workers.
+		@param func Function to execute
+		@param params Function arguments
+	*/
 	template<typename F, typename ...Params>
 	void pushTask(F func, Params ...params)
 	{
 		auto taskPtr = std::make_unique<task_t>(func, std::forward<Params>(params)...);
-		_readyQueue.push(std::move(taskPtr));
+		_scheduler.push(std::move(taskPtr));
 
 		// The queue was empty, so wake up every one.
 		if (_taskCounter++ == 0)
@@ -247,8 +252,13 @@ public:
 			);
 	}
 
+	/** Block this thread until all the submitted tasks are executed. */
 	void taskWait()
 	{
-		_taskCounter.wait(0);
+		if (_taskCounter.load() > 0)
+			_taskCounter.wait(0);
 	}
 };
+
+// Initialize static member of class Box
+thread_local threadpool_t::worker_t *threadpool_t::thisThreadWorker = nullptr;
