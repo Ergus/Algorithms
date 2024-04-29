@@ -27,7 +27,7 @@ using namespace std::chrono_literals;
 void myfunc(size_t i)
 {
 	std::thread::id tid = std::this_thread::get_id();
-	size_t wid = threadpool_t::get_worker().get_id();
+	size_t wid = threadpool_t::getWorkerId();
 
 	std::cout << "Function: " << tid << " : " << wid << " start" << std::endl;
 	std::this_thread::sleep_for(500ms);
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; i < ntasks; ++i)
 		pool.pushTask(
 			[](size_t i){
-					size_t wid = threadpool_t::get_worker().get_id();
+					size_t wid = threadpool_t::getWorkerId();
 
 					std::cout << "Lambda: " << wid  << " start" << std::endl;
 					std::this_thread::sleep_for(500ms);

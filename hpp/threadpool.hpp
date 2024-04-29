@@ -148,6 +148,7 @@ private:
 		const size_t _id;
 		std::thread _thread;
 		threadpool_t &_parentPool;
+		friend class threadpool_t;
 
 		/** Spin function executed by the workers.
 			This function will run contiguously until the thread is notified
@@ -219,6 +220,7 @@ private:
 	scheduler_t<std::unique_ptr<task_t>> _scheduler;
 	std::atomic<size_t> _taskCounter {0};
 	static thread_local worker_t *_thisThreadWorker;
+	static worker_t mainWorker;
 
 	// For taskwait
 	std::mutex _twMutex;
@@ -245,9 +247,11 @@ public:
 		return _pool.size();
 	}
 
-	static const worker_t &get_worker() 
+	static size_t getWorkerId()
 	{
-		return *_thisThreadWorker;
+		if (_thisThreadWorker)
+			return _thisThreadWorker->_id;
+		return -1;
 	}
 
 	/** Resize the thread pool.
