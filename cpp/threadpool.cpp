@@ -19,6 +19,7 @@
 #include <utils.h>
 #include <argparser.hpp>
 #include <iostream>
+#include <numeric>
 
 #include "threadpool.hpp"
 
@@ -30,7 +31,7 @@ void myfunc(size_t i)
 	size_t wid = threadpool_t::getWorkerId();
 
 	std::cout << "Function: " << tid << " : " << wid << " start" << std::endl;
-	std::this_thread::sleep_for(500ms);
+	std::this_thread::sleep_for(50ms);
 	std::cout << "Function: " << tid << " : " << wid << " end" << std::endl;;
 }
 
@@ -50,13 +51,31 @@ int main(int argc, char *argv[])
 					size_t wid = threadpool_t::getWorkerId();
 
 					std::cout << "Lambda: " << wid  << " start" << std::endl;
-					std::this_thread::sleep_for(500ms);
+					std::this_thread::sleep_for(50ms);
 					std::cout << "Lambda: " << wid << " end" << std::endl;;
 			}, i);
 
-	std::cout << "----- Start Waiting -----" << std::endl;
+	std::cout << "----- Start Waiting 1 -----" << std::endl;
 	pool.taskWait();
-	std::cout << "----- End Waiting -----" << std::endl;
+	std::cout << "----- End Waiting 1 -----" << std::endl;
+
+	std::vector<int> tmp1(100);
+	std::iota(tmp1.begin(), tmp1.end(), 0);
+
+	std::vector<int> tmp2(100);
+
+	my::transform(pool, tmp1.begin(), tmp1.end(), tmp2.begin(),
+	              [](int in) -> int {
+					  size_t wid = threadpool_t::getWorkerId();
+					  std::cout << "Trans: " << in << " " << wid << std::endl;
+					  return in * in;
+				  }
+	);
+
+	std::cout << "----- Start Waiting 2 -----" << std::endl;
+	pool.taskWait();
+	std::cout << "----- End Waiting 2 -----" << std::endl;
+
 
     return 0;
 }

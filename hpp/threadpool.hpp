@@ -354,18 +354,20 @@ namespace my {
 		for (size_t i = 0; i < nThreads; ++i) {
 
 			size_t step = ranges[i + 1] - ranges[i];
+			ForwardIt1 end = it1 + step;
 
 			tasks[i] = std::make_unique<threadpool_t::task_t>(
 				std::transform<ForwardIt1, ForwardIt2, UnaryOp>,
-				it1, it1 += step,
+				it1, end,
 				it2,
 				unary_op
 			);
-
+			it1 = end;
 			it2 += step;
 		}
 
 		pool.pushTasks(std::move(tasks));
+		return it2;
 	}
 }
 
