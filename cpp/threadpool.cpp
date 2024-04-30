@@ -28,7 +28,7 @@ using namespace std::chrono_literals;
 void myfunc(size_t i)
 {
 	std::thread::id tid = std::this_thread::get_id();
-	size_t wid = threadpool_t::getWorkerId();
+	size_t wid = my::threadpool_t::getWorkerId();
 
 	std::cout << "Function: " << tid << " : " << wid << " start" << std::endl;
 	std::this_thread::sleep_for(50ms);
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	argparser::init(argc, argv);
 	const size_t ntasks = argparser::cl<size_t>("N Tasks");
 
-	threadpool_t pool(4);
+	my::threadpool_t pool(4);
 
 	for (size_t i = 0; i < ntasks; ++i)
 		pool.pushTask(myfunc, i);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; i < ntasks; ++i)
 		pool.pushTask(
 			[](size_t i){
-					size_t wid = threadpool_t::getWorkerId();
+					size_t wid = my::threadpool_t::getWorkerId();
 
 					std::cout << "Lambda: " << wid  << " start" << std::endl;
 					std::this_thread::sleep_for(50ms);
@@ -66,16 +66,37 @@ int main(int argc, char *argv[])
 
 	my::transform(pool, tmp1.begin(), tmp1.end(), tmp2.begin(),
 	              [](int in) -> int {
-					  size_t wid = threadpool_t::getWorkerId();
+					  size_t wid = my::threadpool_t::getWorkerId();
 					  std::cout << "Trans: " << in << " " << wid << std::endl;
 					  return in * in;
 				  }
 	);
 
+	std::vector<int> pattern(100);
+	std::transform(tmp1.begin(), tmp1.end(), pattern.begin(),
+	               [](int in) -> int {
+					   return in * in;
+				   }
+	);
+
 	std::cout << "----- Start Waiting 2 -----" << std::endl;
 	pool.taskWait();
 	std::cout << "----- End Waiting 2 -----" << std::endl;
+	myassert(pattern == tmp2);
 
+	pool.setPolicy(1);
+	my::transform(pool, tmp1.begin(), tmp1.end(), tmp2.begin(),
+	              [](int in) -> int {
+					  size_t wid = my::threadpool_t::getWorkerId();
+					  std::cout << "Trans: " << in << " " << wid << std::endl;
+					  return in * in;
+				  }
+	);
+
+	std::cout << "----- Start Waiting 3 -----" << std::endl;
+	pool.taskWait();
+	std::cout << "----- End Waiting 3 -----" << std::endl;
+	myassert(pattern == tmp2);
 
     return 0;
 }

@@ -19,6 +19,7 @@
 #include <vector>
 #include <cassert>
 #include <array>
+#include <iostream>
 
 #define myassert(cond) {										\
 		if (!(cond)) {											\
@@ -80,6 +81,27 @@ std::vector<size_t> computeRanges(size_t size, size_t nThreads)
 		acc += (quot + (i < rem));
 	}
 	result[nThreads] = acc;
+
+	return result;
+}
+
+std::vector<size_t> computeChunks(size_t size, size_t chunkSize)
+{
+	const size_t nChunks = size / chunkSize;
+
+	const size_t rem =  size % chunkSize;
+
+	std::vector<size_t> result(nChunks + (int)(rem) + 1);
+	size_t acc = 0;
+	for (size_t i = 0; i < nChunks; ++i)
+	{
+		result[i] = acc;
+		acc += chunkSize;
+	}
+
+	result[nChunks] = acc;
+	if (rem)
+		result[nChunks + 1] = rem;
 
 	return result;
 }
