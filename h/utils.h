@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (C) 2024  Jimmy Aguilar Mena
  *
@@ -20,6 +21,7 @@
 #include <cassert>
 #include <array>
 #include <iostream>
+#include <map>
 
 #define myassert(cond) {										\
 		if (!(cond)) {											\
@@ -37,6 +39,26 @@ std::ostream& operator<<(std::ostream &out, const std::vector<T> &arr)
 		out << it << " ";
 
 	out << std::endl;
+
+	return out;
+}
+
+template <typename K, typename V>
+std::ostream& operator<<(std::ostream &out, const std::pair<K,V> &pair)
+{
+	out << "{" << pair.first <<","<< pair.second << "} ";
+	return out;
+}
+
+
+template <typename K, typename V>
+std::ostream& operator<<(std::ostream &out, const std::map<K,V> &map)
+{
+	out << "{ ";
+	for (auto it : map)
+		out << it;
+
+	out << "}" << std::endl;
 
 	return out;
 }
