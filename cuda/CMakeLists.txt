@@ -16,7 +16,7 @@
 enable_language(CUDA)
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
-file(GLOB CUDA_SOURCES cuda/*.cu)
+file(GLOB CUDA_SOURCES *.cu)
 
 foreach (INPUT_FILE ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
