@@ -77,3 +77,5 @@ add_test(NAME "cpp_queuelock_40" COMMAND $<TARGET_FILE:queuelock> 40)
 add_test(NAME "cpp_fair_lock_10" COMMAND $<TARGET_FILE:fairlock> 10)
 add_test(NAME "cpp_fair_lock_20" COMMAND $<TARGET_FILE:fairlock> 20)
 add_test(NAME "cpp_fair_lock_40" COMMAND $<TARGET_FILE:fairlock> 40)
+
+add_test(NAME "cpp_range_map" COMMAND $<TARGET_FILE:rangemap>)

@@ -19,10 +19,6 @@
 
 int main(int argc, char **argv)
 {
-	argparser::init(argc, argv);
-
-	std::vector<std::string> args = argparser::get_rest();
-
 	rangeMap<int, int> map(0);
 	myassert(map.isEqual({{-2147483648,0}}));
 
