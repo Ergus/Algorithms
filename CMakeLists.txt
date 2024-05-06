@@ -34,6 +34,11 @@ foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
     target_link_libraries (${OUTPUT_FILE} argparser)
+
+    target_compile_options(${OUTPUT_FILE} PRIVATE
+	$<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:-Wall -Wextra -pedantic -Werror -Wno-ignored-qualifiers>
+	$<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>)
+
 endforeach()
 
 enable_testing()
