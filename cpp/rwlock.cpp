@@ -25,11 +25,11 @@
 template <typename T = int>
 struct ProtectedData {
 	ReadWriteLock rwLock;
-	T sharedData;
+	T sharedData {};
 
 public:
 	void Read(int id, size_t nReads) {
-		for (int i = 0; i < nReads; ++i) {
+		for (size_t i = 0; i < nReads; ++i) {
 			rwLock.ReadLock();
 			std::cout << "Reader " << id << " reads shared data: " << sharedData << std::endl;
 			rwLock.ReadUnlock();
@@ -39,7 +39,7 @@ public:
 	}
 
 	void Write(int id, size_t nWrites) {
-		for (int i = 0; i < nWrites; ++i) {
+		for (size_t i = 0; i < nWrites; ++i) {
 			rwLock.WriteLock();
 			++sharedData;
 			std::cout << "Writer " << id << " writes shared data: " << sharedData << std::endl;
@@ -68,25 +68,25 @@ int main(int argc, char **argv) {
 
 	ProtectedData data;
 
-    std::vector<std::thread> readers;
-    std::vector<std::thread> writers;
+	std::vector<std::thread> readers;
+	std::vector<std::thread> writers;
 
-    for (int i = 0; i < maxIts; ++i) {
+	for (size_t i = 0; i < maxIts; ++i) {
 		if (i < nReaders)
 			readers.emplace_back(&ProtectedData<>::Read, &data, i, reads);
 
 		if (i < nWriters)
 			writers.emplace_back(&ProtectedData<>::Write, &data, i, writes);
-    }
+	}
 
-    for (std::thread& reader : readers)
-        reader.join();
+	for (std::thread& reader : readers)
+		reader.join();
 
-    for (std::thread& writer : writers)
-        writer.join();
+	for (std::thread& writer : writers)
+		writer.join();
 
-	myassert(data == nWriters * writes);
-	std::cout << "Final value: " << data << std::endl;
+	std::cout << "Final value: " << data << " expected: " << nWriters * writes << std::endl;
+	myassert((size_t)data == nWriters * writes);
 
-    return 0;
+	return 0;
 }

@@ -30,9 +30,9 @@ void myfunc(size_t i)
 	std::thread::id tid = std::this_thread::get_id();
 	size_t wid = my::threadpool_t::getWorkerId();
 
-	std::cout << "Function: " << tid << " : " << wid << " start" << std::endl;
+	std::cout << "Function: " << i << ":" << tid << ":" << wid << " start" << std::endl;
 	std::this_thread::sleep_for(50ms);
-	std::cout << "Function: " << tid << " : " << wid << " end" << std::endl;;
+	std::cout << "Function: " << i << ":" << tid << ":" << wid << " end" << std::endl;;
 }
 
 int main(int argc, char *argv[])
@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
 			[](size_t i){
 					size_t wid = my::threadpool_t::getWorkerId();
 
-					std::cout << "Lambda: " << wid  << " start" << std::endl;
+					std::cout << "Lambda: " << i << ":" << wid  << " start" << std::endl;
 					std::this_thread::sleep_for(50ms);
-					std::cout << "Lambda: " << wid << " end" << std::endl;;
+					std::cout << "Lambda: " << i << ":" << wid << " end" << std::endl;;
 			}, i);
 
 	std::cout << "----- Start Waiting 1 -----" << std::endl;

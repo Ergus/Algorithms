@@ -30,14 +30,14 @@ int main(int argc, char **argv)
 	lrucache<int, std::string> cache(limit);
 	std::cout << "Initial: " << cache << std::endl;
 
-	for (int i = 0; i < limit; ++i) {
+	for (size_t i = 0; i < limit; ++i) {
 		cache.push(i, std::to_string(i));
 		myassert(cache.size() <= limit);
 	}
 	std::cout << "Insert 0->limit: " << cache << std::endl;
 	myassert(cache.size() == limit);
 
-	for (int i = limit; i < limit + 5; ++i) {
+	for (size_t i = limit; i < limit + 5; ++i) {
 		cache.push(i, std::to_string(i));
 		myassert(cache.size() == limit);
 	}
@@ -46,13 +46,13 @@ int main(int argc, char **argv)
 	myassert(cache.size() == limit);
 
 	// Assert it overrided the first 5 elements
-	for (int i = 0; i < 5; ++i) {
+	for (size_t i = 0; i < 5; ++i) {
 		myassert(cache.find(i) == cache.end());
 	}
 
 	// Assert that the elements from 5->limit are there
 	// check all the elements to preserve cache order.
-	for (int i = 5; i < limit + 5; ++i) {
+	for (size_t i = 5; i < limit + 5; ++i) {
 		myassert(cache.find(i) != cache.end());
 	}
 

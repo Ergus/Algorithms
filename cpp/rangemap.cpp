@@ -17,7 +17,7 @@
 #include <iostream>
 #include "rangemap.hpp"
 
-int main(int argc, char **argv)
+int main()
 {
 	rangeMap<int, int> map(0);
 	myassert(map.isEqual({{-2147483648,0}}));

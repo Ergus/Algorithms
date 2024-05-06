@@ -65,7 +65,7 @@ public:
 
 		// There are 3 cases here
 		if (it2 == _map.end()
-		    || it2->first > end && std::prev(it2)->second != value) {
+		    || (it2->first > end && std::prev(it2)->second != value)) {
 			// End key does not exist, but the prev merge
 			std::advance(it2, -1);           // step back
 			it2 =_map.emplace_hint(it2, end, it2->second);

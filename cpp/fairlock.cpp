@@ -75,14 +75,14 @@ int main(int argc, char **argv) {
 
     std::vector<std::thread> writers;
 
-    for (int i = 0; i < nWriters; ++i) {
+    for (size_t i = 0; i < nWriters; ++i) {
 		writers.emplace_back(&ProtectedData<100>::Write, &data, i);
     }
 
 	std::cout << "All threads created" << std::endl;
 
     for (std::thread& writer : writers)
-        writer.join();
+		writer.join();
 
 	std::cout << "Final value: " << data << std::endl;
 

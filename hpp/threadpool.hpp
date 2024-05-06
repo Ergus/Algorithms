@@ -146,8 +146,8 @@ namespace my {
 		private:
 			std::atomic<status_t> _status {status_t::sleep};
 			const size_t _id;
-			std::thread _thread;
 			threadpool_t &_parentPool;
+			std::thread _thread;
 			friend class threadpool_t;
 
 			/** Spin function executed by the workers.
@@ -211,7 +211,7 @@ namespace my {
 		}
 
 		/** Get a task to execute; intended to be called from the workers only. */
-		std::unique_ptr<task_t> getTask(const worker_t *worker)
+		std::unique_ptr<task_t> getTask([[maybe_unused]] const worker_t * worker)
 		{
 			return _scheduler.get();
 		}

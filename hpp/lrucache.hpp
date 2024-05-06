@@ -118,8 +118,6 @@ public:
 
 			it = tmp.first;
 
-			auto l = it->second.access;
-
 			it->second.access = _access.emplace(_access.end(), it);
 		} else {
 			// Update existing entry and register the insertion as an access.

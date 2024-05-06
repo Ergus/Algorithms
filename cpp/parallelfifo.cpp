@@ -29,14 +29,14 @@ struct ProtectedData {
 
 public:
 	void Get(int id, size_t nReads) {
-		for (int i = 0; i < nReads; ++i) {
+		for (size_t i = 0; i < nReads; ++i) {
 			std::cout << "Reader " << id << " reads shared data: " << sharedData.pop() << std::endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	}
 
 	void Set(int id, size_t nWrites) {
-		for (int i = 0; i < nWrites; ++i) {
+		for (size_t i = 0; i < nWrites; ++i) {
 			sharedData.push(id);
 			std::cout << "Writer " << id << " writes shared data: " << id << std::endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
     std::vector<std::thread> readers;
     std::vector<std::thread> writers;
 
-    for (int i = 0; i < maxIts; ++i) {
+    for (size_t i = 0; i < maxIts; ++i) {
 		if (i < nReaders)
 			readers.emplace_back(&ProtectedData<>::Get, &data, i, reads);
 
