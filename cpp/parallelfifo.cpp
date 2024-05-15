@@ -8,11 +8,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <utils.h>
@@ -57,24 +57,24 @@ int main(int argc, char **argv) {
 
 	ProtectedData data;
 
-    std::vector<std::thread> readers;
-    std::vector<std::thread> writers;
+	std::vector<std::thread> readers;
+	std::vector<std::thread> writers;
 
-    for (size_t i = 0; i < maxIts; ++i) {
+	for (size_t i = 0; i < maxIts; ++i) {
 		if (i < nReaders)
 			readers.emplace_back(&ProtectedData<>::Get, &data, i, reads);
 
 		if (i < nWriters)
 			writers.emplace_back(&ProtectedData<>::Set, &data, i, writes);
-    }
+	}
 
-    for (std::thread& reader : readers) {
-        reader.join();
-    }
+	for (std::thread& reader : readers) {
+		reader.join();
+	}
 
-    for (std::thread& writer : writers) {
-        writer.join();
-    }
+	for (std::thread& writer : writers) {
+		writer.join();
+	}
 
-    return 0;
+	return 0;
 }
