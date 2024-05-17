@@ -24,6 +24,7 @@
 #include <mutex>
 #include <deque>
 #include <utility>
+#include <algorithm>
 #include <condition_variable>
 
 #include <cassert>
