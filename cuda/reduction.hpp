@@ -44,15 +44,15 @@ __device__ T __sum(const T& a,const T& b)
 template <typename T, int N, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
 __global__ void reduceNKernel(T *data, const size_t size, T* output)
 {
-    extern __shared__ T sharedData[]; // must have blockdim
+	extern __shared__ T sharedData[]; // must have blockdim
 
-    int tid = threadIdx.x;
+	int tid = threadIdx.x;
 
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 
 	T localValue = 0;
 
-    // Load data into shared memory
+	// Load data into shared memory
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
 		localValue = TBOp(localValue, TOp(data[globalIdx]));
@@ -60,29 +60,28 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
 	}
 
 	sharedData[tid] = localValue;
-    __syncthreads();
+	__syncthreads();
 
-    // Perform reduction in shared memory
-    for (int stride = blockDim.x / 2; stride > 32; stride >>= 1) {
-        if (tid < stride)
+	// Perform reduction in shared memory
+	#pragma unroll
+	for (int stride = blockDim.x / 2; stride > 32; stride >>= 1) {
+		if (tid < stride)
 			sharedData[tid] = TBOp(sharedData[tid], sharedData[tid + stride]);
-        __syncthreads();
-    }
+		__syncthreads();
+	}
 
 	if (tid < 32)
 	{
 		volatile T* sdata = sharedData;
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 32]);
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 16]);
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 8]);
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 4]);
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 2]);
-		sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + 1]);
+
+		#pragma unroll
+		for (int stride = 32; stride > 0; stride >>= 1)
+			sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + stride]);
 	}
-	
-    // Write the result back to global memory
-    if (tid == 0)
-        output[blockIdx.x] = sharedData[0];
+
+	// Write the result back to global memory
+	if (tid == 0)
+		output[blockIdx.x] = sharedData[0];
 }
 
 /**
@@ -108,7 +107,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 	T localValue = 0;
 
-    // Load data into local variable
+	// Load data into local variable
 	for (int i = 0; i < N && globalIdx < size; ++i)
 	{
 		localValue = TBOp(localValue, TOp(data[globalIdx]));
@@ -117,6 +116,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	__syncthreads();
 
 	// Now reduce per warp into lanes 0
+	#pragma unroll
 	for (int offset = 16; offset > 0; offset >>= 1)
 		localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
 
@@ -130,13 +130,14 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	if (wid == 0) {
 		localValue = sharedData[lane];
 
+		#pragma unroll
 		for (int offset = 16; offset > 0; offset >>= 1)
 			localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
 	}
 
 	// Thread 0 in warp 0
-    if (tid == 0)
-        output[blockIdx.x] = localValue;
+	if (tid == 0)
+		output[blockIdx.x] = localValue;
 }
 
 /**
@@ -160,7 +161,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 
 	type *d_data;
 	cudaMalloc((void**)&d_data, size * sizeof(type));
-    cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 
 	const size_t step = Tfrac * blockdim;
 	size_t nblocks = (size + step - 1) / step;

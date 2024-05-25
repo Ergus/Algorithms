@@ -44,7 +44,7 @@ __global__ void countNWarp(T *data, const size_t size, T* output)
 	int globalIdx = blockIdx.x * blockDim.x * N + tid;
 	T localValue = 0;
 
-    // Load data into local variable
+	// Load data into local variable
 	for (int i = 0; i < N; ++i)
 	{
 		bool count = (globalIdx < size) ? TOp(data[globalIdx]) : 0;
@@ -59,7 +59,7 @@ __global__ void countNWarp(T *data, const size_t size, T* output)
 	// All lanes 0 write the variable to shared memory
 	if (lane == 0)
 		sharedData[wid] = localValue;
-	
+
 	__syncthreads();
 
 	// If in warp 0 the perform local reduction
@@ -71,8 +71,8 @@ __global__ void countNWarp(T *data, const size_t size, T* output)
 	}
 
 	// Thread 0 in warp 0
-    if (tid == 0)
-        output[blockIdx.x] = localValue;
+	if (tid == 0)
+		output[blockIdx.x] = localValue;
 }
 
 /**
