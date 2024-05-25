@@ -115,7 +115,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 		globalIdx += blockDim.x;
 	}
 	__syncthreads();
-	
+
 	// Now reduce per warp into lanes 0
 	for (int offset = 16; offset > 0; offset >>= 1)
 		localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
@@ -173,6 +173,11 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	size_t count = 0;
 	fun<<<nblocks, blockdim, sharedSize>>>(d_data, size, d_result[0]);
 
+	if (cudaError_t err = cudaGetLastError(); err != cudaSuccess) {
+		cudaDeviceSynchronize();
+		printf("CUDA Error: %s\n", cudaGetErrorString(err));
+	}
+
 	if (nblocks > 1)
 	{
 		size = nblocks;
@@ -185,6 +190,11 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 			fun2<<<nblocks, blockdim, sharedSize>>>(
 				d_result[count % 2], size, d_result[(count + 1) % 2]
 			);
+
+			if (cudaError_t err = cudaGetLastError(); err != cudaSuccess) {
+				cudaDeviceSynchronize();
+				printf("CUDA Error: %s\n", cudaGetErrorString(err));
+			}
 
 			size = nblocks;
 			nblocks = (nblocks + step - 1) / step;
