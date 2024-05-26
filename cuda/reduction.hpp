@@ -133,11 +133,11 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 		#pragma unroll
 		for (int offset = 16; offset > 0; offset >>= 1)
 			localValue = TBOp(localValue, __shfl_down_sync(0xffffffff, localValue, offset));
-	}
 
-	// Thread 0 in warp 0
-	if (tid == 0)
-		output[blockIdx.x] = localValue;
+		// Thread 0 in warp 0
+		if (lane == 0)
+			output[blockIdx.x] = localValue;
+	}
 }
 
 /**
@@ -182,7 +182,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	if (nblocks > 1)
 	{
 		size = nblocks;
-		nblocks = (size + step - 1) / step;
+		nblocks = (nblocks + step - 1) / step;
 
 		cudaMalloc((void**)&d_result[1], nblocks * sizeof(int));
 
