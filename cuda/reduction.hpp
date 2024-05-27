@@ -77,11 +77,11 @@ __global__ void reduceNKernel(T *data, const size_t size, T* output)
 		#pragma unroll
 		for (int stride = 32; stride > 0; stride >>= 1)
 			sdata[tid] = TBOp((T)sdata[tid], (T)sdata[tid + stride]);
-	}
 
-	// Write the result back to global memory
-	if (tid == 0)
-		output[blockIdx.x] = sharedData[0];
+		// Write the result back to global memory
+		if (tid == 0)
+			output[blockIdx.x] = sdata[0];
+	}
 }
 
 /**
@@ -210,6 +210,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 		cudaFree(d_result[1]);
 
 	cudaFree(d_result[0]);
+	cudaFree(d_data);
 
 	return result;
 }
