@@ -41,19 +41,33 @@ int main(int argc, char **argv)
 	if (size <= printlimit)
 		std::cout << "Initial:\n" << v << std::endl;
 
-	// host scan
+	// host exclusive scan
 	std::vector<int> v1(v.size());
 	std::exclusive_scan(v.begin(), v.end(), v1.begin(), 0);
 
 	if (size <= printlimit)
-		std::cout << "C++:\n"<< v1 << std::endl;
+		std::cout << "C++ exclusive:\n"<< v1 << std::endl;
 
 	// device scan
 	std::vector<int> v2(v);
-	exclusive_scan<32>(v2.begin(), v2.end());
+	exclusive_scan<32>(v2.begin(), v2.end(), v2.begin());
 
 	if (size <= printlimit)
-		std::cout << "Cuda:\n" << v2 << std::endl;
+		std::cout << "Cuda exclusive:\n" << v2 << std::endl;
+
+	myassert(v1 == v2);
+
+	// host inclusive scan
+	std::inclusive_scan(v.begin(), v.end(), v1.begin());
+
+	if (size <= printlimit)
+		std::cout << "C++ inclusive:\n"<< v1 << std::endl;
+
+	// device scan
+	inclusive_scan<32>(v.begin(), v.end(), v2.begin());
+
+	if (size <= printlimit)
+		std::cout << "Cuda inclusive:\n" << v2 << std::endl;
 
 	myassert(v1 == v2);
 

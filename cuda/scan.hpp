@@ -34,9 +34,11 @@
 
    In order to perform the scan this kernel reads 2 values/ thread from global
    memory. With offset = blockDim.x and compy then into shared-memory.
- */
+   @tparam T underlying type
+   @param[in] idata input array
+*/
 template <typename T>
-__global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
+__global__ void prescan(const T *idata, int size, T *odata, T *tmp = nullptr)
 {
 	extern __shared__ T temp[];       // allocated on invocation
 
@@ -46,19 +48,20 @@ __global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
 	int gidx1 = blockIdx.x * dataSize + tid;
 	int gidx2 = gidx1 + blockDim.x;
 
-	temp[tid]              = (gidx1 < n ? idata[gidx1] : 0);       // load input into shared memory
-	temp[tid + blockDim.x] = (gidx2 < n ? idata[gidx2] : 0);
+	temp[tid]              = (gidx1 < size ? idata[gidx1] : 0);       // load input into shared memory
+	temp[tid + blockDim.x] = (gidx2 < size ? idata[gidx2] : 0);
 
 	__syncthreads();
 	const T localLast = temp[2 * blockDim.x - 1];
 
 	const int tid2 = 2 * tid + 1;
 
-	int offset = 1; 
+	// Up-Sweep
+	int offset = 1;
 	for (int d = dataSize / 2; d > 0; d /= 2)    // build sum in place up the tree
 	{
 		__syncthreads();
-		if (tid < d) { 
+		if (tid < d) {
 			int ai = offset * tid2 - 1;
 			int bi = offset * (tid2 + 1) - 1;
 			temp[bi] += temp[ai];
@@ -67,8 +70,9 @@ __global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
 	}
 
 	if (tid == 0)
-		temp[2 * blockDim.x - 1] = 0;                  // clear the last element  
+		temp[2 * blockDim.x - 1] = 0;            // clear the last element
 
+	// Down-Sweep
 	for (int d = 1; d < dataSize; d *= 2)        // traverse down tree & build scan
 	{
 		offset /= 2;
@@ -84,14 +88,14 @@ __global__ void prescan(T *idata, int n, T *odata, T *tmp = nullptr)
 	__syncthreads(); 
 
 	// Write output out
-	if (gidx1 < n)
+	if (gidx1 < size)
 		odata[gidx1] = temp[tid];
-	
-	if (gidx2 < n)
+
+	if (gidx2 < size)
 		odata[gidx2] = temp[tid + blockDim.x];	
 
 	if (tmp != 0 && tid == blockDim.x - 1)
-		tmp[blockIdx.x] = temp[dataSize - 1] + localLast;
+		tmp[blockIdx.x] = temp[dataSize - 1] + localLast; // Put the last element as the sum
 }
 
 template <typename T>
@@ -111,25 +115,24 @@ __global__ void postscan(T *odata, int n, const T *tmp) {
 }
 
 /**
-   Perform exclusive scan for arrays on devide
+   Perform scan for arrays on devide
 
    This algorith is divided into tww conditions:
    1. For n < 1024 it basically tries to perform the reduction in a single block
    with a blockdim power of two and ignores the template parameter blockdim.
    2. For n < 1024 it starts the scan in three steps:
 
-     a) perform an inclusive Scan/block and return the result of the scan of
-	 every individual block + an array of the total sum of elements in every
-	 block.
+   a) perform an inclusive Scan/block and return the result of the scan of every
+   individual block + an array of the total sum of elements in every block.
 
-	 b) Perform exclusive_scan_internal ovet rhe array os sums to get the global
-	 offset that needs to be applied to every block.
+   b) Perform scan_internal ovet rhe array os sums to get the global
+   offset that needs to be applied to every block.
 
-	 c) Perform a postscan step to update all the individual block indices
-	 adding the global offsets.
+   c) Perform a postscan step to update all the individual block indices adding
+   the global offsets.
 */
 template <int blockdim, typename T>
-void exclusive_scan_internal(T *data, int n, T *o_data)
+void scan_internal(T *data, int n, T *o_data)
 {
 	// Assert blockdim is a power of two;
 	static_assert((blockdim & (blockdim - 1)) == 0);
@@ -154,7 +157,7 @@ void exclusive_scan_internal(T *data, int n, T *o_data)
 
 		prescan<<<nblocks, blockdim, sharedSize>>>(data, n, o_data, o_tmp);
 
-		exclusive_scan_internal<blockdim, T>(o_tmp, nblocks, o_tmp);
+		scan_internal<blockdim, T>(o_tmp, nblocks, o_tmp);
 
 		postscan<<<nblocks, blockdim>>>(o_data, n, o_tmp);
 
@@ -163,13 +166,13 @@ void exclusive_scan_internal(T *data, int n, T *o_data)
 }
 
 /**
-   Cuda exclusive scan with similar format than the std::exclusive_scan
+   Cuda scan with similar format than the std::*_scan
    @tparam blockdim the blockdim to use in the device
  */
-template <int blockdim, typename T>
-void exclusive_scan(T start, T end)
+template <bool EXCLUSIVE, int blockdim, typename Ti, typename To>
+void scan(Ti start, Ti end, To oStart)
 {
-	using type = typename T::value_type;
+	using type = typename Ti::value_type;
 
 	type *data = &*start;
 	const size_t size = std::distance(start, end);
@@ -182,11 +185,31 @@ void exclusive_scan(T start, T end)
 	type *o_data;
 	cudaMalloc((void**)&o_data, size * sizeof(type));
 
-	exclusive_scan_internal<blockdim, type>(d_data, size, o_data);
+	scan_internal<blockdim, type>(d_data, size, o_data);
 
-	cudaMemcpy(data, o_data, size * sizeof(type), cudaMemcpyDeviceToHost);
+	typename To::value_type *outPtr = &*oStart;
+	if (EXCLUSIVE)
+		cudaMemcpy(outPtr, o_data, size * sizeof(type), cudaMemcpyDeviceToHost);
+	else {
+		cudaMemcpy(outPtr, o_data + 1, (size - 1) * sizeof(type), cudaMemcpyDeviceToHost);
+		outPtr[size - 1] = outPtr[size - 2] + data[size - 1];
+	}
 
 	cudaFree(d_data);
 	cudaFree(o_data);
 }
+
+template <int blockdim, typename T, typename To>
+void exclusive_scan(T start, T end, To oStart)
+{
+	scan<true, blockdim>(start, end, oStart);
+}
+
+template <int blockdim, typename T, typename To>
+void inclusive_scan(T start, T end, To oStart)
+{
+	scan<false, blockdim>(start, end, oStart);
+}
+
+
 
