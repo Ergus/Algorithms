@@ -23,6 +23,7 @@
 
 #include "utils.h"
 #include "reduction.hpp"
+#include "reduction_group.hpp"
 
 int main(int argc, char **argv)
 {
@@ -78,6 +79,10 @@ int main(int argc, char **argv)
 	int warp4 = reduceWarp<4>(v.begin(), v.end());
 	std::cout << "Cuda4Warp: " << warp4 << std::endl;
 	myassert(warp4 == basic);
+
+	int warp5 = reduceGroup(v.begin(), v.end());
+	std::cout << "Cuda5Group: " << warp5 << std::endl;
+	myassert(warp5 == basic);
 
 	return 0;
 }
