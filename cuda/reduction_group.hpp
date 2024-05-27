@@ -18,6 +18,8 @@
 
 #include <cooperative_groups.h>
 
+#include <cxxabi.h> // for demanger
+
 namespace cg = cooperative_groups;
 
 template <typename T, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
@@ -115,7 +117,18 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 			(size + blockSize - 1) / blockSize
 	    });
 
-	fprintf(stderr, "# Launching kernel with numBlocks = %d " "blockSize = %d\n", minGridSize, blockSize);
+	{   // Print the launch information
+		const char *fname;
+		cudaFuncGetName(&fname, (void *)fun);  // Get name
+
+		int status;
+		char *realname = abi::__cxa_demangle(fname, NULL, NULL, &status); // demangle
+
+		fprintf(stderr, "# Launching kernel %s with numBlocks = %d " "blockSize = %d\n",
+		        realname, minGridSize, blockSize);
+
+		std::free(realname);
+	}
 
 	// Start normal code.
 	type *d_data;
