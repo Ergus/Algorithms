@@ -88,6 +88,11 @@ __global__ void reduceNGroup(T *data, int size, T* output)
 template <typename T, typename Op>
 typename T::value_type reduceFunGroup(T start, T end, Op fun)
 {
+	// Events to measure time
+	cudaEvent_t eStart, eStop;
+	cudaEventCreate(&eStart);
+	cudaEventCreate(&eStop);
+
 	int supportsCoopLaunch = 0;
 	if(cudaSuccess != cudaDeviceGetAttribute(&supportsCoopLaunch, cudaDevAttrCooperativeLaunch, 0) )
 		throw std::runtime_error("Cooperative Launch is not supported on this machine.");
@@ -142,7 +147,9 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 	dim3 dim_grid(minGridSize, 1, 1);
 	void* kernelArgs[] = { (void*)&d_data, &size, (void*)&d_result};
 
+	cudaEventRecord(eStart);
 	cudaLaunchCooperativeKernel((void *) fun, dim_grid, dim_block, kernelArgs, sharedSize);
+	cudaEventRecord(eStop);
 
 	if (cudaError_t err = cudaGetLastError(); err != cudaSuccess) {
 		cudaDeviceSynchronize();
@@ -154,6 +161,8 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 
 	cudaFree(d_result);
 	cudaFree(d_data);
+
+	fprintf(stderr, "# Kernel time %f mS\n", myGetElapsed(eStart, eStop));
 
 	return result;
 }

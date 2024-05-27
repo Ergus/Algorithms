@@ -140,6 +140,14 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	}
 }
 
+float myGetElapsed(const cudaEvent_t &eStart, cudaEvent_t &eStop)
+{
+	cudaEventSynchronize(eStop);
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, eStart, eStop);
+	return milliseconds;
+}
+
 /**
    @tparam Tfrac relation of rate data/thread to call. If the kernel accesses 2
    data elements / then this value must be two in order to create less useless
@@ -154,6 +162,10 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 template <int blockdim, int Tfrac, typename T, typename Op>
 typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 {
+	cudaEvent_t eStart, eStop;
+	cudaEventCreate(&eStart);
+	cudaEventCreate(&eStop);
+
 	typedef typename T::value_type type;
 
 	int *h_data = &*start;
@@ -172,7 +184,11 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	const size_t sharedSize = blockdim * sizeof(type);
 
 	size_t count = 0;
+
+	cudaEventRecord(eStart);
 	fun<<<nblocks, blockdim, sharedSize>>>(d_data, size, d_result[0]);
+	cudaEventRecord(eStop);
+	float milliseconds = myGetElapsed(eStart, eStop);
 
 	if (cudaError_t err = cudaGetLastError(); err != cudaSuccess) {
 		cudaDeviceSynchronize();
@@ -188,9 +204,12 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 
 		while(size > 1)
 		{
+
+			cudaEventRecord(eStart);
 			fun2<<<nblocks, blockdim, sharedSize>>>(
 				d_result[count % 2], size, d_result[(count + 1) % 2]
 			);
+			cudaEventRecord(eStop);
 
 			if (cudaError_t err = cudaGetLastError(); err != cudaSuccess) {
 				cudaDeviceSynchronize();
@@ -200,6 +219,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 			size = nblocks;
 			nblocks = (nblocks + step - 1) / step;
 			++count;
+			milliseconds += myGetElapsed(eStart, eStop);
 		}
 	}
 
@@ -211,6 +231,8 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 
 	cudaFree(d_result[0]);
 	cudaFree(d_data);
+
+	fprintf(stderr, "# Kernel time %f mS\n", myGetElapsed(eStart, eStop));
 
 	return result;
 }
