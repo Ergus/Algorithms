@@ -41,7 +41,7 @@ __global__ void bitonicKernel(T *dev_values, int j, int k)
 	}
 }
 
-template <typename T, auto TComp>
+template <size_t blockdim, typename T, auto TComp>
 void bitonicSortBase(T first, T last)
 {
 	using type = typename T::value_type;
@@ -53,7 +53,6 @@ void bitonicSortBase(T first, T last)
 	cudaMalloc((void**)&d_data, size * sizeof(type));
     cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 
-	const int blockdim = 32;
 	const int nblocks = (size + blockdim - 1) / blockdim;
 
 	for (size_t k = 2; k <= size; k <<= 1)
@@ -65,8 +64,8 @@ void bitonicSortBase(T first, T last)
 }
 
 
-template <typename T>
+template <size_t blockdim, typename T>
 void bitonicSort(T start, T end)
 {
-	bitonicSortBase<T, __less<typename T::value_type>>(start, end);
+	bitonicSortBase<blockdim, T, __less<typename T::value_type>>(start, end);
 }

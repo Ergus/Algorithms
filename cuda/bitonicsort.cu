@@ -42,13 +42,19 @@ int main(int argc, char **argv)
 		std::cout << v1 << std::endl;
 
 	std::vector<int> v2 = v;
-	bitonicSort(v2.begin(), v2.end());
+	bitonicSort<32>(v2.begin(), v2.end());
 
 	if (size <= printlimit)
 		std::cout << v2 << std::endl;
-
 	assert(std::is_sorted(v2.begin(), v2.end()));
-	myassert(v1.size() == v2.size());
+	myassert(v1 == v2);
+
+	v2 = v;
+	bitonicSort<128>(v2.begin(), v2.end());
+
+	if (size <= printlimit)
+		std::cout << v2 << std::endl;
+	assert(std::is_sorted(v2.begin(), v2.end()));
 	myassert(v1 == v2);
 
 	return 0;
