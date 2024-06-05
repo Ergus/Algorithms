@@ -18,6 +18,8 @@
 #include <argparser.hpp>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
+#include <random>
 
 #include "utils.h"
 #include "bitonicsort.hpp"

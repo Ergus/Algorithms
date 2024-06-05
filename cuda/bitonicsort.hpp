@@ -1,3 +1,4 @@
+#pragma once
 // Copyright (C) 2024  Jimmy Aguilar Mena
 
 // This program is free software: you can redistribute it and/or modify
@@ -13,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <random>
-#include <algorithm>
-
 template <typename T>
 __device__ bool __less(const T& a,const T& b)
 {
@@ -25,7 +23,7 @@ __device__ bool __less(const T& a,const T& b)
 template <typename T, bool (*TComp)(const T& a,const T& b)>
 __global__ void bitonicKernel(T *dev_values, int j, int k)
 {
-	unsigned int i = threadIdx.x + blockDim.x * blockIdx.x;
+	unsigned int i = blockDim.x * blockIdx.x + threadIdx.x;
 	unsigned int ixj = i^j;
 	if (ixj <= i)
 		return;
