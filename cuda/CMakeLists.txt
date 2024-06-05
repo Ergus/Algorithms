@@ -20,9 +20,11 @@ file(GLOB CUDA_SOURCES *.cu)
 
 foreach (INPUT_FILE ${CUDA_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
+    set(OUTPUT_FILE "cuda_${OUTPUT_FILE}")
+
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
     # no pass arquitecture flags to compiler
-    set_property(TARGET ${OUTPUT_FILE} PROPERTY CUDA_ARCHITECTURES OFF)
+    set_property(TARGET ${OUTPUT_FILE} PROPERTY CUDA_ARCHITECTURES 89)
 
     target_link_libraries (${OUTPUT_FILE} argparser)
 endforeach()
@@ -30,18 +32,23 @@ endforeach()
 # Cuda tests ===============
 foreach(X 32 64 512 2048 131072 4194304 67108864)
     # These need to be a power of two
-    add_test(NAME "cuda_bitonicsort_${X}" COMMAND $<TARGET_FILE:bitonicsort> ${X})
+    add_test(NAME "cuda_bitonicsort_${X}" COMMAND $<TARGET_FILE:cuda_bitonicsort> ${X})
+endforeach()
+
+foreach(X 32 64 512 2048 131072 4194304 67108864)
+    # These need to be a power of two
+    add_test(NAME "cuda_mergesort_${X}" COMMAND $<TARGET_FILE:cuda_mergesort> ${X})
 endforeach()
 
 foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_count_${X}" COMMAND $<TARGET_FILE:count> ${X})
+    add_test(NAME "cuda_count_${X}" COMMAND $<TARGET_FILE:cuda_count> ${X})
 endforeach()
 
 foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_reduction_${X}" COMMAND $<TARGET_FILE:reduction> ${X})
+    add_test(NAME "cuda_reduction_${X}" COMMAND $<TARGET_FILE:cuda_reduction> ${X})
 endforeach()
 
 foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
-    add_test(NAME "cuda_scan_${X}" COMMAND $<TARGET_FILE:scan> ${X})
+    add_test(NAME "cuda_scan_${X}" COMMAND $<TARGET_FILE:cuda_scan> ${X})
 endforeach()
 
