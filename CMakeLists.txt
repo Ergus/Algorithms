@@ -30,7 +30,7 @@ include_directories("submodules/ArgParserC")
 
 file(GLOB CPP_SOURCES cpp/*.cpp)
 
-foreach (INPUT_FILE ${CPP_SOURCES} ${CUDA_SOURCES})
+foreach (INPUT_FILE ${CPP_SOURCES})
     get_filename_component(OUTPUT_FILE ${INPUT_FILE} NAME_WE)
     add_executable(${OUTPUT_FILE} ${INPUT_FILE})
     target_link_libraries (${OUTPUT_FILE} argparser)
@@ -46,10 +46,17 @@ enable_testing()
 check_language(CUDA)
 if(CMAKE_CUDA_COMPILER)
     add_subdirectory(cuda)
+
+    # Check if cupti is available.
+    find_package(CUDAToolkit COMPONENTS cupti)
+    if (TARGET CUDA::cupti)
+	add_subdirectory(cupti)
+    endif()
+
 else()
     message(STATUS "No Cuda support")
 endif()
-
+# --------------------------------------------------------------------
 # C++ test
 foreach(X 32 64 512 2048 131072 4194304)
     # These need to be a power of two
