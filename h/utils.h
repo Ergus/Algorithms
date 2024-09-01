@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <span>
 #include <fstream>
 #include <vector>
 #include <cassert>
@@ -31,9 +32,12 @@
 		}														\
 	}
 
+
 /** Overload the << operator for vectors */
 template <typename T>
-std::ostream& operator<<(std::ostream &out, const std::vector<T> &arr)
+requires std::is_same_v<T, std::vector<typename T::value_type>>
+		  || std::is_same_v<T, std::span<typename T::element_type>>
+std::ostream& operator<<(std::ostream &out, const T &arr)
 {
 	for (auto it : arr)
 		out << it << " ";
