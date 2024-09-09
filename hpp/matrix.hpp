@@ -14,25 +14,23 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "utils.h"
+#include "iterator_t.hpp"
 
 template <typename T>
 class matrix {
 
 public:
 
-	class iterator {
-		matrix &_owner;
-		size_t _idx;
+	friend class iterator_t<matrix>;
+	friend class iterator_t<const matrix>;
 
-		std::span<T> operator*()
-		{
-			return _owner[_idx];
-		}
-	};
+	using value_type = T;
+	using iterator = iterator_t<matrix>;
+	using const_iterator = iterator_t<const matrix>;
 
 	/** Construct zero filled matrix.
-		@params[in] rows Number of rows
-		@params[in] cols Number of columns
+		@param[in] rows Number of rows
+		@param[in] cols Number of columns
 	*/
 	matrix(size_t rows = 0, size_t cols = 0)
 	: _rows(rows), _cols(cols), _mat(rows * cols)
@@ -40,7 +38,7 @@ public:
 	}
 
 	/** Row access operator.
-		@params[in] idx the row index to return
+		@param[in] idx the row index to return
 		@return an std::span of the row
 	*/
 	std::span<T> operator[](size_t idx)
@@ -52,7 +50,7 @@ public:
 	}
 
 	/** Row access const operator.
-		@params[in] idx the row index to return
+		@param[in] idx the row index to return
 		@return a const std::span of the row
 	*/
 	std::span<const T> operator[](size_t idx) const
@@ -64,8 +62,8 @@ public:
 	}
 
 	/** Use alternative operator to access elements
-		@params[in] row row element to access
-		@params[in] col column element to access
+		@param[in] row row element to access
+		@param[in] col column element to access
 		@return element value to return
 	*/
 	T operator()(size_t row, size_t col)
@@ -91,6 +89,16 @@ public:
 		 	out << m[r];
 
 		return out;
+	}
+
+	const_iterator begin() const
+	{
+		return const_iterator(*this, 0);
+	}
+
+	const_iterator end() const
+	{
+		return const_iterator(*this, _rows);
 	}
 
 private:

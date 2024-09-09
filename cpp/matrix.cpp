@@ -40,5 +40,10 @@ int main()
 		}
 	}
 
+	// Print using iterator
+	for (const auto it : mat)
+		std::cout << it;
+
+
 	return 0;
 }
