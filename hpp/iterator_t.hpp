@@ -18,7 +18,7 @@
 
 template <typename T>
 class iterator_t {
-	T &_owner; /** Owner matrix */
+	T &_owner;      /** Owner matrix */
 	size_t _idx;    /** Iterator index */
 
 public:
@@ -34,11 +34,22 @@ public:
 
 		Return the std::span<T> associated with the row pointed by the
 		iterator_t.
+		This implementation used auto as a return type because the
+		const_iterator version returns span<const T> while the non
+		const implements two alternatives.
+		Implementing these versions manually implies duplicate the code
+		and use `require` + is_const. This alternative is the same in
+		a much more compact code.
 	*/
 	auto operator*()
 	{
 		return _owner[_idx];
 	}
+
+	/**
+	 * \defgroup Increment operators
+	*/
+	/**@{*/
 
 	iterator_t &operator+=(int step)
 	{
@@ -63,10 +74,13 @@ public:
 		iterator_t ret(*this);
 		return ret += step;
 	}
+	/**@}*/
 
-	/** Decrement operators
-		@param[in] step Distance to moce the iterator_t
+
+	/**
+	 * \defgroup Decrement operators
 	*/
+	/**@{*/
 	iterator_t &operator-=(int step)
 	{
 		return (*this) += (-step);
@@ -87,14 +101,22 @@ public:
 	{
 		return (*this) + (-step);
 	}
+	/**@}*/
 
+	/**
+	 * \defgroup Comparison operators
+	*/
+	/**@{*/
 	auto operator<=>(const iterator_t &other) const
 	{
+		assert(&_owner == &other._owner);
 		return _idx <=> other._idx;
 	}
 
 	bool operator==(const iterator_t& other) const
 	{
+		assert(&_owner == &other._owner);
 		return _idx == other._idx;
 	}
+	/**@}*/
 };
