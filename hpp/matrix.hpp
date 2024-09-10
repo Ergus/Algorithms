@@ -96,9 +96,19 @@ public:
 		return const_iterator(*this, 0);
 	}
 
+	iterator begin()
+	{
+		return iterator(*this, 0);
+	}
+
 	const_iterator end() const
 	{
 		return const_iterator(*this, _rows);
+	}
+
+	iterator end()
+	{
+		return iterator(*this, _rows);
 	}
 
 private:
