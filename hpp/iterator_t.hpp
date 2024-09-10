@@ -22,12 +22,18 @@ class iterator_t {
 	size_t _idx;    /** Iterator index */
 
 public:
+	/** Constructor
+		@param[in] owner Matrix owner for this iterator it is a reference
+		because an iterator never changes the owner
+		@param[in] idx Starting row for the iterator
+	*/
 	iterator_t(T &owner, size_t idx = 0)
 	: _owner(owner), _idx(idx)
 	{
 		assert(_idx <= _owner._rows);
 	}
 
+	/** Use default copy constructor */
 	iterator_t(const iterator_t &) = default;
 
 	/** De-reference operator.
@@ -46,10 +52,9 @@ public:
 		return _owner[_idx];
 	}
 
-	/**
-	 * \defgroup Increment operators
-	*/
-	/**@{*/
+	/** \defgroup Increment operators
+	 *  @{
+	 */
 
 	iterator_t &operator+=(int step)
 	{
@@ -77,10 +82,9 @@ public:
 	/**@}*/
 
 
-	/**
-	 * \defgroup Decrement operators
-	*/
-	/**@{*/
+	/** \defgroup Decrement operators
+	 *  @{
+	 */
 	iterator_t &operator-=(int step)
 	{
 		return (*this) += (-step);
@@ -103,10 +107,9 @@ public:
 	}
 	/**@}*/
 
-	/**
-	 * \defgroup Comparison operators
-	*/
-	/**@{*/
+	/** \defgroup Comparison operators
+	 *  @{
+	 */
 	auto operator<=>(const iterator_t &other) const
 	{
 		assert(&_owner == &other._owner);
