@@ -18,7 +18,6 @@
 int main()
 {
 
-
 	// Construct a zero filled matrix
 	matrix<double> mat(5, 4);
 
@@ -27,11 +26,10 @@ int main()
 		for (size_t c = 0; c < 4; ++c)
 			mat[r][c] = (double) count++;
 
-
 	// Print the matrix using the overloaded operator<<
 	std::cout << mat << std::endl;
 
-	// Initialize usng the [] operator
+	// Test the accessors
 	for (size_t r = 0, count = 0; r < 5; ++r) {
 		for (size_t c = 0; c < 4; ++c) {
 			double tmp = (double) count++;
@@ -40,18 +38,23 @@ int main()
 		}
 	}
 
-	// Print using iterator
+	// Change the values with for loop and implicit iterators.
+	for (auto it : mat)
+		for (auto &val : it)
+			val = 42;
+
+	// Print C++-11 for syntax
 	for (const auto it : mat)
 		std::cout << it;
 
-	// Print using iterator
+	// Change using iterator
 	for (matrix<double>::iterator it =  mat.begin(); it != mat.end(); ++it)
-		std::cout << *it;
+		for (auto itt = (*it).begin(); itt != (*it).end(); ++itt)
+			*itt = -42;
 
 	// Print using const iterator
 	for (matrix<double>::const_iterator it =  mat.begin(); it != mat.end(); ++it)
 		std::cout << *it;
-
 
 	return 0;
 }
