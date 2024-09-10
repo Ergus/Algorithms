@@ -52,6 +52,12 @@ public:
 		return _owner[_idx];
 	}
 
+	/** Non const iterators must be implicitly convertible to const ones */
+	operator iterator_t<const T>() const requires (!std::is_const<T>::value)
+	{
+		return iterator_t<const T>(_owner, _idx);
+	}
+
 	/** \defgroup Increment operators
 	 *  @{
 	 */
@@ -116,7 +122,7 @@ public:
 		return _idx <=> other._idx;
 	}
 
-	bool operator==(const iterator_t& other) const
+	bool operator==(const iterator_t &other) const
 	{
 		assert(&_owner == &other._owner);
 		return _idx == other._idx;

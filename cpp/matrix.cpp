@@ -44,6 +44,14 @@ int main()
 	for (const auto it : mat)
 		std::cout << it;
 
+	// Print using iterator
+	for (matrix<double>::iterator it =  mat.begin(); it != mat.end(); ++it)
+		std::cout << *it;
+
+	// Print using const iterator
+	for (matrix<double>::const_iterator it =  mat.begin(); it != mat.end(); ++it)
+		std::cout << *it;
+
 
 	return 0;
 }
