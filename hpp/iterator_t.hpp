@@ -22,6 +22,10 @@ class iterator_t {
 	size_t _idx;    /** Iterator index */
 
 public:
+
+	using value_type = T::row_type;
+	using difference_type = std::ptrdiff_t;
+
 	/** Constructor
 		@param[in] owner Matrix owner for this iterator it is a reference
 		because an iterator never changes the owner
@@ -50,6 +54,29 @@ public:
 	auto operator*()
 	{
 		return _owner[_idx];
+	}
+
+
+	/** This is a trick in order to access the span elements with ->
+		Because the span type is temporal and we cannot access it.
+	*/
+	struct Helper {
+		std::span<typename T::value_type> _val;
+
+		Helper(iterator_t<T> it)
+		:_val(*it)
+		{}
+
+		std::span<typename T::value_type> *operator->()
+		{
+			return &_val;
+		}
+	};
+
+	/** Make the class convertible to helper */
+	operator Helper()
+	{
+		return Helper(this);
 	}
 
 	/** Non const iterators must be implicitly convertible to const ones */

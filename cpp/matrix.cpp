@@ -52,6 +52,11 @@ int main()
 		for (auto itt = (*it).begin(); itt != (*it).end(); ++itt)
 			*itt = -42;
 
+	// Change using iterator
+	// for (matrix<double>::iterator it = mat.begin(); it != mat.end(); ++it)
+	// 	for (auto itt = it->begin(); itt != it->end(); ++itt)
+	// 		*itt = -42;
+
 	// Print using const iterator
 	for (matrix<double>::const_iterator it =  mat.begin(); it != mat.end(); ++it)
 		std::cout << *it;

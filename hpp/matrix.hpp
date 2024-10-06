@@ -25,6 +25,7 @@ public:
 	friend class iterator_t<const matrix>;
 
 	using value_type = T;
+	using row_type = std::span<T>;
 	using iterator = iterator_t<matrix>;
 	using const_iterator = iterator_t<const matrix>;
 
