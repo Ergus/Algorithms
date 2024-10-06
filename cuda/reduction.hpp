@@ -140,7 +140,7 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	}
 }
 
-float myGetElapsed(const cudaEvent_t &eStart, cudaEvent_t &eStop)
+float myGetElapsed(const cudaEvent_t &eStart, const cudaEvent_t &eStop)
 {
 	cudaEventSynchronize(eStop);
 	float milliseconds = 0;
@@ -172,8 +172,15 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	size_t size = std::distance(start, end);
 
 	type *d_data;
+	cudaEventRecord(eStart);
 	cudaMalloc((void**)&d_data, size * sizeof(type));
+	cudaEventRecord(eStop);
+	fprintf(stderr, "# cudaMalloc time %f mS\n", myGetElapsed(eStart, eStop));
+
+	cudaEventRecord(eStart);
 	cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
+	cudaEventRecord(eStop);
+	fprintf(stderr, "# cudaMemcpy time %f mS\n", myGetElapsed(eStart, eStop));
 
 	const size_t step = Tfrac * blockdim;
 	size_t nblocks = (size + step - 1) / step;
@@ -232,7 +239,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 	cudaFree(d_result[0]);
 	cudaFree(d_data);
 
-	fprintf(stderr, "# Kernel time %f mS\n", myGetElapsed(eStart, eStop));
+	fprintf(stderr, "# Kernel time %f mS\n", milliseconds);
 
 	return result;
 }
