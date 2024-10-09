@@ -47,7 +47,7 @@ int main() {
 		printf("  Concurrent computation/communication: %s\n",prop.deviceOverlap ? "yes" : "no");
 		printf("  Stream priorities supported: %s\n", prop.streamPrioritiesSupported ? "yes" : "no");
 		printf("  Unified Addressing: %s\n", prop.unifiedAddressing ? "yes" : "no");
-		printf("  Support Managed Memory: %d\n", prop.managedMemory ? "yes" : "no");
+		printf("  Support Managed Memory: %s\n", prop.managedMemory ? "yes" : "no");
 	}
 
 	return 0;
