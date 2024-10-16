@@ -20,10 +20,13 @@
 #include <numeric>
 #include <random>
 #include <algorithm>
+#include <chrono>
 
 #include "utils.h"
 #include "reduction.hpp"
 #include "reduction_group.hpp"
+
+using hrc = std::chrono::high_resolution_clock;
 
 int main(int argc, char **argv)
 {
@@ -36,12 +39,14 @@ int main(int argc, char **argv)
     static std::mt19937 mte(rd());   // this is a relative big object to create
 
     std::uniform_int_distribution<int> dist(0, 1024); // dist(mte)
+	std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
 
-    std::generate(v.begin(), v.end(), [&dist](){ return dist(mte); });
-
-	// std::cout << v << std::endl;
-
+	hrc::time_point start = std::chrono::high_resolution_clock::now();
 	int cpp = std::reduce(v.begin(), v.end());
+	hrc::time_point stop = std::chrono::high_resolution_clock::now();
+	auto elaps = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+	std::cerr << "# C++ time: " << elaps << std::endl;
 	std::cout << "C++: " << cpp << std::endl;
 
 	int basic = reduceBasic(v.begin(), v.end());
@@ -80,9 +85,9 @@ int main(int argc, char **argv)
 	std::cout << "Cuda4Warp: " << warp4 << std::endl;
 	myassert(warp4 == basic);
 
-	int warp5 = reduceGroup(v.begin(), v.end());
-	std::cout << "Cuda5Group: " << warp5 << std::endl;
-	myassert(warp5 == basic);
+	int group = reduceGroup(v.begin(), v.end());
+	std::cout << "Cuda5Group: " << group << std::endl;
+	myassert(group == basic);
 
 	return 0;
 }

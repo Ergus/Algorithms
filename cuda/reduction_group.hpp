@@ -137,8 +137,15 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 
 	// Start normal code.
 	type *d_data;
+	cudaEventRecord(eStart);
 	cudaMalloc((void**)&d_data, size * sizeof(type));
+	cudaEventRecord(eStop);
+	fprintf(stderr, "# cudaMalloc time %f mS\n", myGetElapsed(eStart, eStop));
+
+	cudaEventRecord(eStart);
 	cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
+	cudaEventRecord(eStop);
+	fprintf(stderr, "# cudaMemcpy time %f mS\n", myGetElapsed(eStart, eStop));
 
 	type *d_result;
 	cudaMalloc((void**)&d_result, minGridSize * sizeof(type));
