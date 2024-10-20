@@ -110,6 +110,7 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 
 	const size_t sharedSize = blockSize * sizeof(type);
 
+	// Compute how many blocks for fun fit in an SM
 	int numBlocksPerSm = 0;
 	cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, fun, blockSize, sharedSize);
 
@@ -117,8 +118,8 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 	cudaGetDeviceProperties(&deviceProp, 0);
 
 	minGridSize = std::min({
+	        minGridSize,
 	        deviceProp.multiProcessorCount * numBlocksPerSm,
-			blockSize,
 			(size + blockSize - 1) / blockSize
 	    });
 
