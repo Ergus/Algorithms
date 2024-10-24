@@ -58,10 +58,11 @@ else()
 endif()
 # --------------------------------------------------------------------
 # C++ test
-foreach(X 32 64 512 2048 131072 4194304)
+foreach(X 32 64 65 512 513 2048 131072 4194304)
     # These need to be a power of two
     add_test(NAME "cpp_mergesort_${X}" COMMAND $<TARGET_FILE:mergesort> ${X})
     add_test(NAME "cpp_heapsort_${X}" COMMAND $<TARGET_FILE:heapsort> ${X})
+    add_test(NAME "cpp_quicksort_${X}" COMMAND $<TARGET_FILE:quicksort> ${X})
 endforeach()
 
 foreach(X 512 2048 2050 2090 2091 131072 4194304)
