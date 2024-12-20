@@ -8,11 +8,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -41,14 +41,14 @@ public:
 		int counter = 0;
 
 		while (true) {
-            unsigned int s = _lock.load(std::memory_order_relaxed);
-            if (! (s & (WRITER | WRITER_PENDING)) ) { // no writer or pending
-                if (_lock.fetch_add(ONE_READER) & WRITER) {
+			unsigned int s = _lock.load(std::memory_order_relaxed);
+			if (! (s & (WRITER | WRITER_PENDING)) ) { // no writer or pending
+				if (_lock.fetch_add(ONE_READER) & WRITER) {
 					_lock -= ONE_READER; // some writer got there first, undo the increment
-                } else {
+				} else {
 					break; // successfully stored increased number of readers
 				}
-            }
+			}
 
 			if (counter++ < 16) {
 				// _mm_pause(); // Not standard C++... on windows it is, not sure on linux
@@ -56,21 +56,21 @@ public:
 				std::this_thread::yield();
 				counter = 0;
 			}
-        }
+		}
 	}
 
 	void ReadUnlock() {
-        _lock -= ONE_READER;
-    }
+		_lock -= ONE_READER;
+	}
 
 	void WriteLock() {
 		int counter = 0;
 
 		while (true) {
 			unsigned int s = _lock.load(std::memory_order_relaxed);
-			if (! (s & BUSY)) {  // no readers or writer running (so take it)
+			if (! (s & BUSY)) {	 // no readers or writer running (so take it)
 				if (_lock.compare_exchange_strong(s, WRITER))
-                    break; // successfully stored writer flag
+					break; // successfully stored writer flag
 			} else if (! (s & WRITER_PENDING) ) {
 				_lock |= WRITER_PENDING;
 			}
@@ -90,11 +90,11 @@ public:
 
 private:
 
-    static constexpr unsigned int WRITER = 1;
-    static constexpr unsigned int WRITER_PENDING = 1 << 1;
-    static constexpr unsigned int READERS = ~(WRITER | WRITER_PENDING);
-    static constexpr unsigned int ONE_READER = 4;
-    static constexpr unsigned int BUSY = WRITER | READERS;
+	static constexpr unsigned int WRITER = 1;
+	static constexpr unsigned int WRITER_PENDING = 1 << 1;
+	static constexpr unsigned int READERS = ~(WRITER | WRITER_PENDING);
+	static constexpr unsigned int ONE_READER = 4;
+	static constexpr unsigned int BUSY = WRITER | READERS;
 
 	std::atomic<unsigned int> _lock{0};
 };
