@@ -21,19 +21,17 @@
 #include <numeric>
 #include <vector>
 #include <thread>
+#include <functional>
 #include <atomic>
-
 #include <cassert>
 #include <cstdlib>
 
-#include <iostream>
-#include <functional>
-#include <array>
+#include "utils.h"
 
 namespace my {
 
 	template <typename Iter, typename Oter>
-	void exclusiveScanParallel(
+	void exclusiveScanParallelForkJoin(
 		Iter first, Iter last, Oter ofirst, size_t nThreads = 0
 	) {
 		using type = typename Iter::value_type;
@@ -76,6 +74,7 @@ namespace my {
 			count[i] = count[i - 1] + *(ofirst + lastIdx) + *(first + lastIdx);
 		}
 
+		// Update the chunks indices with the scanned values
 		for (size_t i = 0; i < nThreads; ++i) {
 			threads[i] = std::thread(
 				std::for_each<Oter, std::function<void(typename Oter::reference)>>,
@@ -92,4 +91,88 @@ namespace my {
 			thread.join();
 	}
 
+	template <typename Iter, typename Oter>
+	void exclusiveScanParallelSync(
+		Iter first, Iter last, Oter ofirst, size_t nThreads = 0
+	) {
+		using type = typename Iter::value_type;
+
+		if (nThreads == 0)
+			nThreads = std::thread::hardware_concurrency();
+
+		const size_t size = last - first;
+
+		if (size < 2)
+			return;
+
+		// No parallelize small arrays
+		if (size < 32) {
+			std::exclusive_scan(first, last, ofirst, type());
+			return;
+		}
+
+		const std::vector<size_t> ranges = computeRanges(size, nThreads);
+
+		std::vector<std::thread> threads(nThreads);
+
+		std::atomic<size_t> barrier1(nThreads);
+		std::atomic<size_t> barrier2(1);
+
+		std::vector<size_t> count(nThreads);
+
+		std::mutex mtx;
+
+		// First scan by chunks
+		for (size_t i = 0; i < nThreads; ++i) {
+			threads[i] = std::thread(
+				[&, i]() {
+					std::exclusive_scan(
+						first + ranges[i],
+						first + ranges[i + 1],
+						ofirst + ranges[i],
+						type()
+					);
+
+					// Busy waiting (just for fun)
+					if (barrier1.load() == 0)
+						abort();
+					barrier1.fetch_sub(1);
+					while (barrier1.load() > 0)
+						std::this_thread::yield();
+
+					if (i == 0) {
+						// We assume that the number of threads is small enough
+						// at least nThreads << size
+						for (size_t j = 1; j < nThreads; ++j) {
+							const size_t lastIdx = ranges[j] - 1;
+							count[j] = count[j - 1] + *(ofirst + lastIdx) + *(first + lastIdx);
+						}
+						barrier2.fetch_sub(1);
+						barrier2.notify_all();
+					}
+
+					// light wait waiting
+					barrier2.wait(1);
+					std::cout << "Thread: " << i << "after" << std::endl;
+
+					// Update indices
+					std::for_each(
+						ofirst + ranges[i],
+						ofirst + ranges[i + 1],
+						[value = count[i]](auto& v)
+						{
+							v += value;
+						}
+					);
+				}
+			);
+		}
+
+		for (auto &thread : threads)
+			thread.join();
+	}
+
+
+
+	
 }

@@ -98,8 +98,8 @@ namespace my {
 		size_t n = arr.size();
 
 		// Build the max-heap using Floyd's bottom-up method
-		for (size_t i = n / 2 - 1; i >= 0; --i) {
-			heapifyFloyd(arr, n, i);
+		for (size_t i = n / 2; i > 0; --i) {
+			heapifyFloyd(arr, n, i - 1);
 		}
 
 		// Extract elements from the heap one by one

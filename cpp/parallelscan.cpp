@@ -39,10 +39,14 @@ int main(int argc, char **argv)
 	std::cout << v0 << std::endl;
 
 	std::vector<int> v1(size);
-	my::exclusiveScanParallel(v.begin(), v.end(), v1.begin(), 6);
+	my::exclusiveScanParallelForkJoin(v.begin(), v.end(), v1.begin(), 8);
 	std::cout << v1 << std::endl;
-
 	myassert(v0 == v1);
+
+	std::vector<int> v2(size);
+	my::exclusiveScanParallelSync(v.begin(), v.end(), v2.begin(), 8);
+	std::cout << v2 << std::endl;
+	myassert(v0 == v2);
 
 	return 0;
 }
