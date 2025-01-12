@@ -93,6 +93,7 @@ add_test(NAME "cpp_fair_lock_20" COMMAND $<TARGET_FILE:fairlock> 20)
 add_test(NAME "cpp_fair_lock_40" COMMAND $<TARGET_FILE:fairlock> 40)
 
 add_test(NAME "cpp_range_map" COMMAND $<TARGET_FILE:rangemap>)
+add_test(NAME "cpp_contiguous_map" COMMAND $<TARGET_FILE:contiguousmap>)
 
 add_test(NAME "cpp_vrange_2_8_2" COMMAND $<TARGET_FILE:vrange> 2 8 2)
 add_test(NAME "cpp_vrange_8_2_-1" COMMAND $<TARGET_FILE:vrange> 8 2 -2)
