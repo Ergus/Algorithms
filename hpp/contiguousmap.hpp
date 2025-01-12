@@ -77,7 +77,7 @@ public:
 			// 2*i + 1 left, 2*i + 2 right
 			i = (2*i + 1 + (_nodes[i].first < key));
 			if (i >= _nodes.size())
-				_nodes.resize(_nodes.size());
+				_nodes.resize(2 * get_pow_2(i));
 		}
 
 		_nodes[i].first = key;

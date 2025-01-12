@@ -33,7 +33,7 @@
 	}
 
 
-/** Overload the << operator for vectors */
+/** Overload the << operator for std::vectors */
 template <typename T>
 requires std::is_same_v<T, std::vector<typename T::value_type>>
 		  || std::is_same_v<T, std::span<typename T::element_type>>
@@ -47,6 +47,7 @@ std::ostream& operator<<(std::ostream &out, const T &arr)
 	return out;
 }
 
+/** Overload the << operator for std::pairs */
 template <typename K, typename V>
 std::ostream& operator<<(std::ostream &out, const std::pair<K,V> &pair)
 {
@@ -54,7 +55,7 @@ std::ostream& operator<<(std::ostream &out, const std::pair<K,V> &pair)
 	return out;
 }
 
-
+/** Overload the << operator for std::map */
 template <typename K, typename V>
 std::ostream& operator<<(std::ostream &out, const std::map<K,V> &map)
 {
@@ -132,6 +133,12 @@ std::vector<size_t> computeChunks(size_t size, size_t chunkSize)
 	return result;
 }
 
+/**
+   Counts the number of bits == 1 in the input.
+
+   This function was added in C++-20, so, this function is actually
+   not needed anymore.
+ */
 size_t popcount(unsigned int i)
 {
 	size_t count = 0;
@@ -142,6 +149,13 @@ size_t popcount(unsigned int i)
 	return count;
 }
 
+/**
+   Get the closest power of two not bigger than input
+
+   For example: given 9, 10 or 15, will will return 8;
+   To get the next power of two bigger than input just multiply the
+   result by two.
+ */
 unsigned int get_pow_2(unsigned int i)
 {
 	unsigned int tmp = i & (i - 1);
