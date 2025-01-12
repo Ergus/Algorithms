@@ -18,15 +18,9 @@
 #pragma once
 
 #include <algorithm>
-#include <numeric>
 #include <vector>
-#include <thread>
-#include <atomic>
-
 #include <cassert>
 #include <cstdlib>
-
-#include <iostream>
 
 namespace my {
 
@@ -67,5 +61,4 @@ namespace my {
 			heapify(arr, (size_t) i, 0);
 		}
 	}
-
 }
