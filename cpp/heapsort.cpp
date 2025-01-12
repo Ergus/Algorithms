@@ -49,5 +49,12 @@ int main(int argc, char **argv)
 	myassert(std::is_sorted(basic.begin(), basic.end()));
 	myassert(basic == stl);
 
+	std::vector<int> floyd = v;
+	my::heapSortFloyd(floyd);
+	if (size <= printlimit)
+		std::cout << "Floyd:\n" << floyd << std::endl;
+	myassert(std::is_sorted(floyd.begin(), floyd.end()));
+	myassert(floyd == stl);
+
 	return 0;
 }

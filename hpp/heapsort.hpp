@@ -61,4 +61,52 @@ namespace my {
 			heapify(arr, (size_t) i, 0);
 		}
 	}
+
+
+	// Function to heapify a subtree rooted at node i using Floyd's method
+	template <typename T>
+	void heapifyFloyd(std::vector<T>& arr, size_t n, size_t i)
+	{
+		size_t current = i;
+		size_t child = 2 * current + 1; // Left child
+
+		while (child < n) {
+			size_t right = child + 1;
+			// Select the larger of the left and right children
+			if (child + 1 < n && arr[child + 1] > arr[child]) {
+				child = right;
+			}
+
+			// If the current node is already larger
+			if (arr[current] >= arr[child]) {
+				break;
+			}
+
+			// Swap the current node with the larger child
+			std::swap(arr[current], arr[child]);
+
+			// Move down the heap
+			current = child;
+			child = 2 * current + 1;
+		}
+	}
+
+	// Function to perform Floyd's Heap Sort
+	template<typename T>
+	void heapSortFloyd(std::vector<T>& arr)
+	{
+		size_t n = arr.size();
+
+		// Build the max-heap using Floyd's bottom-up method
+		for (size_t i = n / 2 - 1; i >= 0; --i) {
+			heapifyFloyd(arr, n, i);
+		}
+
+		// Extract elements from the heap one by one
+		for (int i = n - 1; i > 0; --i) {
+			std::swap(arr[0], arr[i]); // Move the root (largest element) to the end
+			heapifyFloyd(arr, i, 0); // Restore the heap property for the reduced heap
+		}
+	}
+
 }
