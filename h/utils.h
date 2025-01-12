@@ -131,3 +131,23 @@ std::vector<size_t> computeChunks(size_t size, size_t chunkSize)
 
 	return result;
 }
+
+size_t popcount(unsigned int i)
+{
+	size_t count = 0;
+	while (i) {
+		i &= (i - 1);
+		++count;
+	}
+	return count;
+}
+
+unsigned int get_pow_2(unsigned int i)
+{
+	unsigned int tmp = i & (i - 1);
+	while (tmp) {
+		i = tmp;
+		tmp = i & (i - 1);
+	}
+	return i;
+}

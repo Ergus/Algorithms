@@ -18,15 +18,12 @@
 #pragma once
 
 #include <algorithm>
-#include <numeric>
 #include <vector>
 #include <thread>
-#include <atomic>
-
 #include <cassert>
 #include <cstdlib>
 
-#include <iostream>
+#include "utils.h"
 
 namespace my {
 
@@ -145,10 +142,9 @@ namespace my {
 	template<class Iter>
 	void mergeSortStdParallel(Iter first, Iter last, size_t nThreads = 0)
 	{
+		// This assumes that we have a power o two as nThreads.
 		if (nThreads == 0)
-			nThreads = std::thread::hardware_concurrency();
-
-		static std::atomic<size_t> counter = 0; // count the number of created threads
+			nThreads = get_pow_2(std::thread::hardware_concurrency());
 
 		const size_t size = last - first;
 
@@ -164,18 +160,17 @@ namespace my {
 
 		std::thread t;
 
-		if (counter++ < nThreads) {
-			t = std::thread(mergeSortStdParallel<Iter>, first, middle, nThreads); 
+		if (nThreads > 1) {
+			t = std::thread(mergeSortStdParallel<Iter>, first, middle, nThreads / 2); 
 		} else {
 			mergeSortStd(first, middle);
 		}
 
 		if (std::distance(middle, last) > 1)
-			mergeSortStdParallel(middle, last, nThreads);
+			mergeSortStdParallel(middle, last, nThreads / 2);
 
 		if (t.joinable()) {
 			t.join();
-			--counter;
 		}
 
 		std::inplace_merge(first, middle, last);
