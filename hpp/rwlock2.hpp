@@ -36,7 +36,18 @@
  */
 class ReadWriteLock2 {
 public:
-	void ReadLock() {
+
+	/**
+	   The read lock checks the last to bits for cases where there is
+       a writer active or pending.
+	   Else, it increments the reader lock counter.
+	   The result of the increase checks again the result in case of
+	   race conditions where one writer increased the lock between our
+	   read and the write.
+	   We don't use CAS here because the old value is not known in advance.
+	 */
+	void ReadLock()
+	{
 
 		int counter = 0;
 
@@ -44,7 +55,7 @@ public:
 			unsigned int s = _lock.load(std::memory_order_relaxed);
 			if (! (s & (WRITER | WRITER_PENDING)) ) { // no writer or pending
 				if (_lock.fetch_add(ONE_READER) & WRITER) {
-					_lock -= ONE_READER; // some writer got there first, undo the increment
+					_lock.fetch_sub(ONE_READER); // some writer got there first, undo the increment
 				} else {
 					break; // successfully stored increased number of readers
 				}
@@ -59,20 +70,36 @@ public:
 		}
 	}
 
-	void ReadUnlock() {
-		_lock -= ONE_READER;
+	/**
+		Simply decreae the counter
+	*/
+	void ReadUnlock()
+	{
+		_lock.fetch_sub(ONE_READER);
 	}
 
-	void WriteLock() {
+	/**
+	   The write lock is a bit more interesting.
+	   As this lock gives some preference to the write operations, but don't
+	   enforces any order between the write operations.
+
+	   The steps are simple:
+	   1. Read the lock atomic and if not busy (not reader or writer), take it
+	   2. Else, if it is busy, then check if there is a pending-writer or
+	   attempt to set it myself. This flag enforces that the write operations
+	   take precedence over the reads.
+	*/
+	void WriteLock()
+	{
 		int counter = 0;
 
 		while (true) {
 			unsigned int s = _lock.load(std::memory_order_relaxed);
 			if (! (s & BUSY)) {	 // no readers or writer running (so take it)
 				if (_lock.compare_exchange_strong(s, WRITER))
-					break; // successfully stored writer flag
+					break;           // successfully stored writer flag
 			} else if (! (s & WRITER_PENDING) ) {
-				_lock |= WRITER_PENDING;
+				_lock.fetch_or(WRITER_PENDING);
 			}
 
 			if (counter++ < 16) {
@@ -84,17 +111,24 @@ public:
 		}
 	}
 
-	void WriteUnlock() {
-		_lock &= READERS;
+	/**
+	   The write unlock releases all the read and read pending operations.
+	   If some reader tries to take it, it ill check after the set operation
+	   that there is not any writer or writer pending.
+	   If there is it will politely release the lock with no action
+	 */
+	void WriteUnlock()
+	{
+		_lock.fetch_and(READERS);
 	}
 
 private:
 
-	static constexpr unsigned int WRITER = 1;
-	static constexpr unsigned int WRITER_PENDING = 1 << 1;
-	static constexpr unsigned int READERS = ~(WRITER | WRITER_PENDING);
-	static constexpr unsigned int ONE_READER = 4;
-	static constexpr unsigned int BUSY = WRITER | READERS;
+	static constexpr unsigned int WRITER = 1;                           // 0000000001
+	static constexpr unsigned int WRITER_PENDING = 1 << 1;              // 0000000010
+	static constexpr unsigned int READERS = ~(WRITER | WRITER_PENDING); // 1111111100
+	static constexpr unsigned int ONE_READER = 1 << 2;                  // 0000000100
+	static constexpr unsigned int BUSY = WRITER | READERS;              // 1111111101
 
 	std::atomic<unsigned int> _lock{0};
 };
