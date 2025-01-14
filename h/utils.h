@@ -33,26 +33,25 @@
 		}														\
 	}
 
-
-/** Overload the << operator for std::vectors */
-template <typename T>
-requires std::is_same_v<T, std::vector<typename T::value_type>>
-		  || std::is_same_v<T, std::span<typename T::element_type>>
-std::ostream& operator<<(std::ostream &out, const T &arr)
-{
-	for (auto it : arr)
-		out << it << " ";
-
-	out << std::endl;
-
-	return out;
-}
-
 /** Overload the << operator for std::pairs */
 template <typename K, typename V>
 std::ostream& operator<<(std::ostream &out, const std::pair<K,V> &pair)
 {
 	out << "{" << pair.first <<","<< pair.second << "} ";
+	return out;
+}
+
+/** Overload the << operator for std::vectors and std::span */
+template <typename T>
+requires std::is_same_v<T, std::vector<typename T::value_type>>
+		  || std::is_same_v<T, std::span<typename T::element_type>>
+std::ostream& operator<<(std::ostream &out, const T &arr)
+{
+	for (const auto &it : arr)
+		out << it << " ";
+
+	out << std::endl;
+
 	return out;
 }
 

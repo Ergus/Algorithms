@@ -22,26 +22,31 @@ int main()
 {
 	cmap<int, int> mymap(16);
 
-	// Init some values
-	mymap[8] = 16;
-	mymap[4] = 8;
-	mymap[10] = 20;
-	mymap[2] = 4;
-	mymap[3] = 6;
-	mymap[7] = 14;
-	mymap[5] = 10;
+	std::vector<std::pair<int, int>> reference = {{8, 16},
+												  {4, 8},
+												  {10, 20},
+												  {2, 4},
+												  {3, 6},
+												  {7, 14},
+												  {5, 10}};
 
-	mymap.printvec();
+	std::cout << "Init some values from reference" << std::endl;
+	for (auto &[k, v] : reference) {
+		std::cout << "init[" << k << "] = " << v << std::endl;
+		mymap[k] = v;
+	}
 
-	myassert(mymap[8] == 16);
-	myassert(mymap[4] == 8);
-	myassert(mymap[10] == 20);
-	myassert(mymap[2] == 4);
-	myassert(mymap[3] == 6);
-	myassert(mymap[7] == 14);
-	myassert(mymap[5] == 10);
+	std::cout << "\nPrint internal vector" << std::endl;
+	for (const auto &node: mymap.get_internal_vector()){
+		std::cout << node << std::endl;
+	}
 
-	std::cout << "Iterate recursive" << std::endl;
+	std::cout << "\nCompare some values from reference" << std::endl;
+	for (auto &[k, v] : reference) {
+		myassert(mymap[k] == v);
+	}
+
+	std::cout << "\nIterate recursive" << std::endl;
 	mymap.traverse_dfs(
 		0,
 		[](size_t i, const std::pair<int, int>& p)
@@ -50,9 +55,7 @@ int main()
 		}
 	);
 
-	std::cout << std::endl;
-
-	std::cout << "Iterate non-recursive" << std::endl;
+	std::cout << "\nIterate non-recursive" << std::endl;
 	mymap.traverse_dfs_it(
 		0,
 		[](size_t i, const std::pair<int, int>& p)
@@ -61,7 +64,7 @@ int main()
 		}
 	);
 
-	std::cout << "Iterate with iterator" << std::endl;
+	std::cout << "\nIterate with iterator" << std::endl;
 	for (const auto& it : mymap) {
 		std::cout << it << std::endl;
 	}

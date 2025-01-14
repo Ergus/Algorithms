@@ -149,7 +149,7 @@ public:
 			// left = 2*i + 1 , right = 2*i + 2
 			i = (2*i + 1 + (_nodes[i].first < key));
 			if (i >= _nodes.size())
-				_nodes.resize(2 * get_pow_2(i));
+				_nodes.resize(2 * get_pow_2(i), default_node);
 		}
 
 		_nodes[i].first = key;
@@ -185,10 +185,9 @@ public:
 		}
 	}
 
-	void printvec() const
+	const std::vector<std::pair<K,V>> &get_internal_vector() const
 	{
-		for (size_t i = 0; i < _nodes.size(); ++i)
-			std::cout << i << " : "<< _nodes[i] << std::endl;
+		return _nodes;
 	}
 
 	const_iterator begin() const
