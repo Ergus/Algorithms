@@ -41,7 +41,7 @@ int main()
 	myassert(mymap[7] == 14);
 	myassert(mymap[5] == 10);
 
-	// Iterate recursive
+	std::cout << "Iterate recursive" << std::endl;
 	mymap.traverse_dfs(
 		0,
 		[](size_t i, const std::pair<int, int>& p)
@@ -52,7 +52,7 @@ int main()
 
 	std::cout << std::endl;
 
-	// Iterate non-recursive
+	std::cout << "Iterate non-recursive" << std::endl;
 	mymap.traverse_dfs_it(
 		0,
 		[](size_t i, const std::pair<int, int>& p)
@@ -60,6 +60,11 @@ int main()
 			std::cout << i << " -> " << p << std::endl;
 		}
 	);
+
+	std::cout << "Iterate with iterator" << std::endl;
+	for (const auto& it : mymap) {
+		std::cout << it << std::endl;
+	}
 
 	return 0;
 }

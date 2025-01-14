@@ -23,6 +23,7 @@
 #include <array>
 #include <iostream>
 #include <map>
+#include <limits>
 
 #define myassert(cond) {										\
 		if (!(cond)) {											\

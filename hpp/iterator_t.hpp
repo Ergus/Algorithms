@@ -23,7 +23,7 @@ class iterator_t {
 
 public:
 
-	using value_type = T::row_type;
+	using value_type = T::sub_type;
 	using difference_type = std::ptrdiff_t;
 
 	/** Constructor
@@ -34,7 +34,6 @@ public:
 	iterator_t(T &owner, size_t idx = 0)
 	: _owner(owner), _idx(idx)
 	{
-		assert(_idx <= _owner._rows);
 	}
 
 	/** Use default copy constructor */
@@ -53,7 +52,14 @@ public:
 	*/
 	auto operator*()
 	{
-		return _owner[_idx];
+		return _owner.get(_idx);
+	}
+
+	iterator_t &operator=(const iterator_t &other)
+	{
+		assert(&_owner == &other._owner);
+		_idx = other._idx;
+		return *this;
 	}
 
 
@@ -88,11 +94,12 @@ public:
 	/** \defgroup Increment operators
 	 *  @{
 	 */
-
 	iterator_t &operator+=(int step)
 	{
-		_idx += step;
-		assert(_idx <= _owner._rows);
+		_idx = _owner.advance(_idx, step);
+		if (_idx == std::numeric_limits<size_t>::max())
+			*this = _owner.end();
+
 		return *this;
 	}
 
