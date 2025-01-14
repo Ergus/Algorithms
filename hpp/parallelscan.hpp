@@ -120,8 +120,6 @@ namespace my {
 
 		std::vector<size_t> count(nThreads);
 
-		std::mutex mtx;
-
 		// First scan by chunks
 		for (size_t i = 0; i < nThreads; ++i) {
 			threads[i] = std::thread(
