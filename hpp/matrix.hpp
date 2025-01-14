@@ -19,13 +19,46 @@
 template <typename T>
 class matrix {
 
+	/** Row access function.
+		@param[in] idx the row index to return
+		@return an std::span of the row
+	*/
+	std::span<T> get(size_t idx)
+	{
+		if (idx < _rows)
+			return std::span<T>(_mat.begin() + idx * _cols, _cols);
+
+		return std::span<T>();
+	}
+
+	/** Row access const function.
+		@param[in] idx the row index to return
+		@return a const std::span of the row
+	*/
+	std::span<const T> get(size_t idx) const
+	{
+		if (idx < _rows)
+			return std::span<const T>(_mat.begin() + idx * _cols, _cols);
+
+		return std::span<const T>();
+	}
+
+	size_t advance(size_t start, int step) const
+	{
+		start += step;
+		if (start >= _rows)
+			return std::numeric_limits<size_t>::max();
+
+		return start;
+	}
+
 public:
 
 	friend class iterator_t<matrix>;
 	friend class iterator_t<const matrix>;
 
 	using value_type = T;
-	using row_type = std::span<T>;
+	using sub_type = std::span<T>;
 	using iterator = iterator_t<matrix>;
 	using const_iterator = iterator_t<const matrix>;
 
@@ -44,10 +77,7 @@ public:
 	*/
 	std::span<T> operator[](size_t idx)
 	{
-		if (idx < _rows)
-			return std::span<T>(_mat.begin() + idx * _cols, _cols);
-
-		return std::span<T>();
+		return this->get(idx);
 	}
 
 	/** Row access const operator.
@@ -56,10 +86,7 @@ public:
 	*/
 	std::span<const T> operator[](size_t idx) const
 	{
-		if (idx < _rows)
-			return std::span<const T>(_mat.begin() + idx * _cols, _cols);
-
-		return std::span<const T>();
+		return this->get(idx);
 	}
 
 	/** Use alternative operator to access elements

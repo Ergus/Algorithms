@@ -17,47 +17,71 @@
 
 int main()
 {
-
-	// Construct a zero filled matrix
+	std::cout << "Construct a zero filled matrix" << std::endl;
 	matrix<double> mat(5, 4);
 
-	// Initialize usng the [] operator
+	std::cout << "\nInitialize usng the [] operator" << std::endl;
 	for (size_t r = 0, count = 0; r < 5; ++r)
 		for (size_t c = 0; c < 4; ++c)
 			mat[r][c] = (double) count++;
 
-	// Print the matrix using the overloaded operator<<
-	std::cout << mat << std::endl;
+	std::cout << "\nPrint the matrix using the overloaded operator <<" << std::endl;
+	std::cout << mat;
 
 	// Test the accessors
 	for (size_t r = 0, count = 0; r < 5; ++r) {
 		for (size_t c = 0; c < 4; ++c) {
 			double tmp = (double) count++;
-			assert(mat[r][c] == tmp);
-			assert(mat(r, c) == tmp);
+			myassert(mat[r][c] == tmp);
+			myassert(mat(r, c) == tmp);
 		}
 	}
 
-	// Change the values with for loop and implicit iterators.
+	// Print C++-11 for syntax dual iterator
+	// Test dual iterator accesor.
+	std::cout << "\nTest two iteration levels access and print" << std::endl;
+	size_t i = 0;
+	for (const auto it : mat) {
+		size_t j = 0;
+		for (const auto itt : it) {
+			std::cout << itt << " ";
+			myassert(mat[i][j++] == itt);
+		}
+		std::cout << std::endl;
+		++i;
+	}
+
+	std::cout << "\nTest one iteration levels access print" << std::endl;
+	for (const auto it : mat)
+		std::cout << it;
+
+	std::cout << "\nChange the values with for loop and implicit iterator" << std::endl;
 	for (auto it : mat)
 		for (auto &val : it)
 			val = 42;
 
-	// Print C++-11 for syntax
-	for (const auto it : mat)
-		std::cout << it;
+	std::cout << "\nTest values after for loop and implicit iterator" << std::endl;
+	for (size_t r = 0; r < 5; ++r) {
+		for (size_t c = 0; c < 4; ++c) {
+			myassert(mat[r][c] == 42);
+			myassert(mat(r, c) == 42);
+		}
+	}
 
-	// Change using iterator
+	std::cout << "\nTest modification with iterator" << std::endl;
 	for (matrix<double>::iterator it =  mat.begin(); it != mat.end(); ++it)
 		for (auto itt = (*it).begin(); itt != (*it).end(); ++itt)
 			*itt = -42;
 
-	// Change using iterator
-	// for (matrix<double>::iterator it = mat.begin(); it != mat.end(); ++it)
-	// 	for (auto itt = it->begin(); itt != it->end(); ++itt)
-	// 		*itt = -42;
+	std::cout << "\nTest values after modification with iterator" << std::endl;
+	for (size_t r = 0; r < 5; ++r) {
+		for (size_t c = 0; c < 4; ++c) {
+			myassert(mat[r][c] == -42);
+			myassert(mat(r, c) == -42);
+		}
+	}
 
-	// Print using const iterator
+	std::cout << "\nPrint using const iterator" << std::endl;
 	for (matrix<double>::const_iterator it =  mat.begin(); it != mat.end(); ++it)
 		std::cout << *it;
 
