@@ -21,7 +21,7 @@
 #include <algorithm>
 
 #include "utils.h"
-#include "scan.hpp"
+#include "scan.cuh"
 
 int main(int argc, char **argv)
 {

@@ -33,7 +33,7 @@
    Initial scan that performs the scan within a block.
 
    In order to perform the scan this kernel reads 2 values/ thread from global
-   memory. With offset = blockDim.x and compy then into shared-memory.
+   memory. With offset = blockDim.x and copy then into shared-memory.
    @tparam T underlying type
    @param[in] idata input array
 */
@@ -94,7 +94,7 @@ __global__ void prescan(const T *idata, int size, T *odata, T *tmp = nullptr)
 	if (gidx2 < size)
 		odata[gidx2] = temp[tid + blockDim.x];	
 
-	if (tmp != 0 && tid == blockDim.x - 1)
+	if (tmp != nullptr && tid == blockDim.x - 1)
 		tmp[blockIdx.x] = temp[dataSize - 1] + localLast; // Put the last element as the sum
 }
 
@@ -115,7 +115,7 @@ __global__ void postscan(T *odata, int n, const T *tmp) {
 }
 
 /**
-   Perform scan for arrays on devide
+   Perform scan for arrays on device
 
    This algorith is divided into tww conditions:
    1. For n < 1024 it basically tries to perform the reduction in a single block

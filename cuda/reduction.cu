@@ -23,8 +23,8 @@
 #include <chrono>
 
 #include "utils.h"
-#include "reduction.hpp"
-#include "reduction_group.hpp"
+#include "reduction.cuh"
+#include "reduction_group.cuh"
 
 using hrc = std::chrono::high_resolution_clock;
 

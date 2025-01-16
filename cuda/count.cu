@@ -22,7 +22,7 @@
 #include <algorithm>
 
 #include "utils.h"
-#include "count.hpp"
+#include "count.cuh"
 
 __device__ bool is_five(const int& val)
 {

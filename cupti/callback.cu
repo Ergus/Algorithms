@@ -23,6 +23,9 @@
 #include "utils.h"
 
 
+#include <cupti.h>
+
+
 /**
    Example kernel r[] = a1[] + a2[]
 */
@@ -70,8 +73,67 @@ std::vector<float> functionExample(
 }
 
 
+static void CUPTIAPI My_CUPTI_callback(
+	void* /* udata */,
+	CUpti_CallbackDomain domain,
+	CUpti_CallbackId cbid,
+	const CUpti_CallbackData *cbinfo
+) {
+	if (cbinfo == NULL)
+		return;
+
+	/*
+	 * Filter out all nested callbacks
+	 */
+	switch (cbinfo->callbackSite) {
+	case CUPTI_API_ENTER:
+		printf("Callback Enter %d\n", domain);
+		break;
+	case CUPTI_API_EXIT:
+		printf("Callback Exit %d\n", domain);
+		break;
+	}
+
+	// switch (domain) {
+	// case CUPTI_CB_DOMAIN_DRIVER_API:
+	// 	ret = Extrae_DriverAPI_callback(cbid, cbinfo);
+	// 	break;
+	// case CUPTI_CB_DOMAIN_RUNTIME_API:
+	// 	ret = Extrae_RuntimeAPI_callback(cbid, cbinfo);
+	// 	break;
+	// default:
+	// 	ret = -1;
+	// }
+
+	// if (ret == 0) {
+	// 	if (cbinfo->callbackSite == CUPTI_API_ENTER)
+	// 		TRACE_EVENT(LAST_READ_TIME, CUDA_UNTRACKED_EV, cbid);
+	// 	else if (cbinfo->callbackSite == CUPTI_API_EXIT)
+	// 		TRACE_EVENT(TIME, CUDA_UNTRACKED_EV, EVT_END);
+	// }
+
+	// if((cbinfo->callbackSite == CUPTI_API_EXIT))
+	// 	Extrae_CUDA_updateDepth(cbinfo);
+}
+
+void My_CUPTI_init()
+{
+	CUpti_SubscriberHandle subscriber;
+
+	/* Create a subscriber. All the routines will be handled at Extrae_CUPTI_callback */
+	cuptiSubscribe(&subscriber, (CUpti_CallbackFunc) My_CUPTI_callback, NULL);
+
+	/* Enable all callbacks in all domains */
+	cuptiEnableAllDomains(1, subscriber);
+
+	/* Disable uninteresting callbacks */
+	cuptiEnableCallback(0, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API, CUPTI_RUNTIME_TRACE_CBID_cudaDriverGetVersion_v3020); /* 1 */
+}
+
 int main(int argc, char **argv)
 {
+	My_CUPTI_init();
+
 	argparser::init(argc, argv);
 	const size_t size = argparser::cl<int>("array_size");
 

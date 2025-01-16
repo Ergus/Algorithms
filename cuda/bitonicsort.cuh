@@ -25,6 +25,7 @@ __global__ void bitonicKernel(T *dev_values, int j, int k)
 {
 	unsigned int i = blockDim.x * blockIdx.x + threadIdx.x;
 	unsigned int ixj = i^j;
+
 	if (ixj <= i)
 		return;
 
@@ -67,3 +68,4 @@ void bitonicSort(T start, T end)
 {
 	bitonicSortBase<blockdim, T, __less<typename T::value_type>>(start, end);
 }
+

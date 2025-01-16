@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "bitonicsort.hpp" // for __less
+#include "bitonicsort.cuh" // for __less
 
 template<auto TComp, typename T>
 __global__ void merge(T *d_in, T *d_out, size_t size, size_t width)

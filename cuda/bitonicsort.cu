@@ -22,7 +22,7 @@
 #include <random>
 
 #include "utils.h"
-#include "bitonicsort.hpp"
+#include "bitonicsort.cuh"
 
 int main(int argc, char **argv)
 {

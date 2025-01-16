@@ -17,7 +17,7 @@
  */
 
 #include <functional>
-#include "reduction.hpp"
+#include "reduction.cuh"
 
 /**
    Reduction using registers memory

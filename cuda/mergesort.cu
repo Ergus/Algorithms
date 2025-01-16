@@ -22,7 +22,7 @@
 #include <random>
 
 #include "utils.h"
-#include "mergesort.hpp"
+#include "mergesort.cuh"
 
 int main(int argc, char **argv)
 {
