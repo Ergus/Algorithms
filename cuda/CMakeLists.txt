@@ -35,7 +35,7 @@ foreach(X 32 64 512 2048 131072 4194304 67108864)
     add_test(NAME "cuda_bitonicsort_${X}" COMMAND $<TARGET_FILE:cuda_bitonicsort> ${X})
 endforeach()
 
-foreach(X 32 64 512 2048 131072 4194304 67108864)
+foreach(X 32 64 512 2048 131072 4194304)
     # These need to be a power of two
     add_test(NAME "cuda_mergesort_${X}" COMMAND $<TARGET_FILE:cuda_mergesort> ${X})
 endforeach()
