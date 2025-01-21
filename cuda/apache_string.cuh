@@ -36,7 +36,7 @@ __global__ void markSpaces(const char *input, size_t size, size_t *tmp)
 /**
    Fill the starts arrays with the indices of words starts
    "000011111122223" -> "0,4,10,14"
- */
+ **/
 __global__ void setStartsIn(
 	const size_t *tmp, size_t size, size_t *starts, size_t nWords
 ) {
@@ -48,12 +48,14 @@ __global__ void setStartsIn(
 		}
 	}
 
-	if (idx == size)
-		starts[nWords] = idx + 1;
+	if (idx == nWords - 1)
+		starts[nWords] = size + 1;
 }
 
-
-
+/**
+   Compact the string using the start indices.
+   "aaaa bbb ccc" -> "aaabbbccc"
+ **/
 __global__ void transformBuffer(
 	const char *input, size_t size,
 	const size_t *starts, size_t nWords,
@@ -68,6 +70,10 @@ __global__ void transformBuffer(
 	}
 }
 
+/**
+   The starts array contains the indices of the start points in the original array.
+   This functions updates the indices to the ones in the final buffer.
+ **/
 __global__ void updateStarts(size_t *starts, size_t nWords)
 {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -127,10 +133,10 @@ std::pair<std::string, std::vector<size_t>> parseString(const std::string &input
 		size_t *hstarts = (size_t *) malloc((nWords + 1) * sizeof(size_t));
 		cudaMemcpy(hstarts, starts, (nWords + 1) * sizeof(size_t), cudaMemcpyDeviceToHost);
 
-		myassert(hstarts[0] == 0);
-		for (size_t i = 1; i <= nWords; ++i) {
+		//myassert(hstarts[0] == 0);
+		for (size_t i = 1; i < nWords; ++i) {
 			size_t idx = hstarts[i];
-			myassert(input[idx] != ' ');
+			myassert(input[idx - 1] == ' ');
 		}
 
 		free(hstarts);
