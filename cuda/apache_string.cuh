@@ -17,8 +17,10 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
 #include <cassert>
+#include <algorithm>
+
+#include "scan.cuh"
 
 /**
    Create a temporal array with 0 everywhere and 1 in the spaces positions
@@ -35,20 +37,22 @@ __global__ void markSpaces(const char *input, size_t size, size_t *tmp)
    Fill the starts arrays with the indices of words starts
    "000011111122223" -> "0,4,10,14"
  */
-__global__ void setStarts(
+__global__ void setStartsIn(
 	const size_t *tmp, size_t size, size_t *starts, size_t nWords
 ) {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
 	if (idx < size) {
 		if (idx == 0 || tmp[idx] != tmp[idx - 1]) {
-			assert(tmp[idx] < nWords);
 			starts[tmp[idx]] = idx;
 		}
 	}
 
-	if (idx == size - 1)
-		starts[tmp[size - 1] + 1] = size;
+	if (idx == size)
+		starts[nWords] = idx + 1;
 }
+
+
 
 __global__ void transformBuffer(
 	const char *input, size_t size,
@@ -59,17 +63,20 @@ __global__ void transformBuffer(
 	if (idx < nWords) {
 		size_t inStart = starts[idx];
 		size_t inEnd = starts[idx + 1];
-
 		for (size_t i = inStart; i < inEnd - 1; ++i)
 			buffer[i - idx] = input[i];
 	}
+}
 
-	if (idx == nWords - 1)
-		buffer[size - nWords] = '\0';
+__global__ void updateStarts(size_t *starts, size_t nWords)
+{
+	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx <= nWords)
+		starts[idx] -= idx;
 }
 
 template<int blockdim>
-void parseString(const std::string &input)
+std::pair<std::string, std::vector<size_t>> parseString(const std::string &input)
 {
 	const size_t size = input.size();
 
@@ -77,58 +84,83 @@ void parseString(const std::string &input)
 	cudaMalloc((void**)&d_in, size * sizeof(char));
     cudaMemcpy(d_in, input.data(), input.size() * sizeof(char), cudaMemcpyHostToDevice);
 
-	size_t* tmp;
-	cudaMalloc((void**)&tmp, size * sizeof(size_t));
+	size_t* ones;
+	cudaMalloc((void**)&ones, size * sizeof(size_t));
 
 	int numBlocks = (size + blockdim - 1) / blockdim;
 
-	markSpaces<<<numBlocks, blockdim>>>(d_in, size, tmp);
-	scan_internal<blockdim, size_t>(tmp, size, tmp);
+	markSpaces<<<numBlocks, blockdim>>>(d_in, size, ones);
+	scan_internal<blockdim, size_t>(ones, size, ones);
+
+#ifndef NDEBUG
+	{
+		size_t *hones = (size_t *) malloc(size * sizeof(size_t));
+
+		cudaMemcpy(hones, ones, size * sizeof(size_t), cudaMemcpyDeviceToHost);
+
+		size_t count = 0;
+		for (size_t i = 1; i < size; ++i) {
+			if (hones[i] != hones[i - 1]) {
+				myassert(input[i - 1] == ' ');
+				++count;
+			} else if (input[i - 1] == ' ') {
+				perror("Some space was not marked in gpu");
+			}
+		}
+		myassert(count == std::count_if(input.begin(), input.end(), [](char c) { return (c == ' '); }));
+		myassert(count == hones[size - 1]);
+
+		free(hones);
+	}
+#endif
 
 	size_t nWords;
-	cudaMemcpy(&nWords, &tmp[size], sizeof(size_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&nWords, &ones[size - 1], sizeof(size_t), cudaMemcpyDeviceToHost);
+	nWords += 1; // Words are spaces + 1, because the first letter is not preceded by a space.
 
 	size_t *starts;
 	cudaMalloc((void**)&starts, (nWords + 1) * sizeof(size_t));
-	setStarts<<<numBlocks, blockdim>>>(tmp, size, starts, nWords);
+	setStartsIn<<<numBlocks, blockdim>>>(ones, size, starts, nWords);
 
-	// Reuse the tmp buffer to avoid an extra malloc and free
+#ifndef NDEBUG
+	{
+		size_t *hstarts = (size_t *) malloc((nWords + 1) * sizeof(size_t));
+		cudaMemcpy(hstarts, starts, (nWords + 1) * sizeof(size_t), cudaMemcpyDeviceToHost);
+
+		myassert(hstarts[0] == 0);
+		for (size_t i = 1; i <= nWords; ++i) {
+			size_t idx = hstarts[i];
+			myassert(input[idx] != ' ');
+		}
+
+		free(hstarts);
+	}
+#endif
+
+	// Reuse the ones buffer to avoid an extra malloc and free
 	// Update the number of blocks for now on
-	numBlocks = (nWords + blockdim - 1) / nWords;
-	char *buffer = (char *)tmp;
+	numBlocks = (nWords + blockdim - 1) / blockdim;
+	char *buffer = (char *)ones;
 	transformBuffer<<<numBlocks, blockdim>>>(d_in, size, starts, nWords, buffer, size - nWords);
+	updateStarts<<<numBlocks, blockdim>>>(starts, nWords);
 
-	std::string h_buffer(size - nWords, ' ');
+	char *hbuffer = (char *)malloc((size - nWords + 1) * sizeof(char));
+
+	cudaMemcpy(hbuffer, buffer, (size - nWords + 1) * sizeof(char), cudaMemcpyDeviceToHost);
+
+	std::string h_buffer(hbuffer, (size - nWords + 1));
+
 	std::vector<size_t> h_starts(nWords + 1);
 
-	cudaMemcpy(h_buffer.data(), buffer, (size - nWords) * sizeof(char), cudaMemcpyDeviceToHost);
 	cudaMemcpy(h_starts.data(), starts, (nWords + 1) * sizeof(size_t), cudaMemcpyDeviceToHost);
 
+	free(hbuffer);
 	cudaFree(starts);
-	cudaFree(tmp);
+	cudaFree(ones);
 	cudaFree(d_in);
+
+	return {h_buffer, h_starts};
 }
-
-
-// __global__ void sort(char *input, int *offsets, int *sizes, int &numStrings)
-// {
-// 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-// 	if (idx == 0 || input[idx - 1] == ' ') {
-
-// 		int length = 0;
-// 		while (input[idx + length] != ' ' && input[idx + length] != '\0')
-// 			length++;
-
-// 		int wordIdx = atomicAdd(numStrings, 1);
-// 		offsets[wordIdx] = idx;
-// 		sizes[wordIdx] = length;
-// 	}
-// }
-
-
-/**
-   Perform a boolean scan
- */
 
 class apache_string {
 	std::string buffer;
@@ -145,6 +177,15 @@ public:
 				buffer.push_back(c);
 		}
 		starts.push_back(buffer.size());
+
+		size_t nWords = starts.size() - 1;
+	}
+
+	apache_string(const std::string &input, size_t blockdim)
+	{
+		auto [_buffer, _starts] = parseString<32>(input);
+		buffer = std::move(_buffer);
+		starts = std::move(_starts);
 	}
 
 	friend std::ostream &operator <<(std::ostream &out, const apache_string &str)
@@ -154,6 +195,11 @@ public:
 			out << str.buffer.substr(*it, *std::next(it) - *it) << " ";
 		}
 		return out;
+	}
+
+	bool operator==(const apache_string& other) const
+	{
+		return (buffer == other.buffer) && (starts == other.starts);
 	}
 
 };

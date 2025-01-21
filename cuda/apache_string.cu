@@ -31,9 +31,14 @@ int main()
 	std::cout << "Original string:" << std::endl;
 	std::cout << text << std::endl;
 
-	apache_string tmp(text);
-	std::cout << "Apache string:" << std::endl;
-	std::cout << tmp << std::endl;
+	apache_string tmp_host(text);
+	std::cout << "Apache string cpu:" << std::endl;
+	std::cout << tmp_host << std::endl;
 
+	apache_string tmp_device(text, 32);
+	std::cout << "Apache string gpu:" << std::endl;
+	std::cout << tmp_device << std::endl;
+
+	myassert(tmp_host == tmp_device);
 	return 0;
 }
