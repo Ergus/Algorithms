@@ -68,11 +68,11 @@ int main(int argc, char **argv)
 	if (size <= printlimit)
 		std::cout << text << std::endl;
 
-	apache_string tmp_host(text);
+	apache_string tmp_host = apache_string::factory<>(text);
 	if (size <= printlimit)
 		std::cout << "Apache string cpu:" << tmp_host << std::endl;
 
-	apache_string tmp_device(text, 32);
+	apache_string tmp_device = apache_string::factory<32>(text);
 	if (size <= printlimit)
 		std::cout << "Apache string gpu:" << tmp_device << std::endl;
 

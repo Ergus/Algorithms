@@ -26,7 +26,7 @@
    Create a temporal array with 0 everywhere and 1 in the spaces positions
    "aaaa bbbbb ccc" -> "00001000001000"
 */
-__global__ void markSpaces(const char *input, size_t size, size_t *tmp)
+__global__ void mark_spaces(const char *input, size_t size, size_t *tmp)
 {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < size)
@@ -37,7 +37,7 @@ __global__ void markSpaces(const char *input, size_t size, size_t *tmp)
    Fill the starts arrays with the indices of words starts
    "000011111122223" -> "0,4,10,14"
  **/
-__global__ void setStartsIn(
+__global__ void set_starts_in(
 	const size_t *tmp, size_t size, size_t *starts, size_t nWords
 ) {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -56,7 +56,7 @@ __global__ void setStartsIn(
    Compact the string using the start indices.
    "aaaa bbb ccc" -> "aaabbbccc"
  **/
-__global__ void transformBuffer(
+__global__ void transform_buffer(
 	const char *input, size_t size,
 	const size_t *starts, size_t nWords,
 	char *buffer, size_t buffersize
@@ -74,15 +74,24 @@ __global__ void transformBuffer(
    The starts array contains the indices of the start points in the original array.
    This functions updates the indices to the ones in the final buffer.
  **/
-__global__ void updateStarts(size_t *starts, size_t nWords)
+__global__ void update_starts(size_t *starts, size_t nWords)
 {
 	const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx <= nWords)
 		starts[idx] -= idx;
 }
 
+/**
+   This is the main cuda function.
+
+   This gets a string and returns a pair with a string with no spaces
+   and a vector with the string start positions.
+   I assume that the input strings are trimmed and this version of the code
+   works totally reentrant and uses the default stream (yes I know that's
+   not efficient, but This was made for correctness mainly)
+ **/
 template<int blockdim>
-std::pair<std::string, std::vector<size_t>> parseString(const std::string &input)
+std::pair<std::string, std::vector<size_t>> parse_string_gpu(const std::string &input)
 {
 	const size_t size = input.size();
 
@@ -95,7 +104,7 @@ std::pair<std::string, std::vector<size_t>> parseString(const std::string &input
 
 	int numBlocks = (size + blockdim - 1) / blockdim;
 
-	markSpaces<<<numBlocks, blockdim>>>(d_in, size, ones);
+	mark_spaces<<<numBlocks, blockdim>>>(d_in, size, ones);
 	scan_internal<blockdim, size_t>(ones, size, ones);
 
 #ifndef NDEBUG
@@ -126,7 +135,7 @@ std::pair<std::string, std::vector<size_t>> parseString(const std::string &input
 
 	size_t *starts;
 	cudaMalloc((void**)&starts, (nWords + 1) * sizeof(size_t));
-	setStartsIn<<<numBlocks, blockdim>>>(ones, size, starts, nWords);
+	set_starts_in<<<numBlocks, blockdim>>>(ones, size, starts, nWords);
 
 #ifndef NDEBUG
 	{
@@ -147,8 +156,8 @@ std::pair<std::string, std::vector<size_t>> parseString(const std::string &input
 	// Update the number of blocks for now on
 	numBlocks = (nWords + blockdim - 1) / blockdim;
 	char *buffer = (char *)ones;
-	transformBuffer<<<numBlocks, blockdim>>>(d_in, size, starts, nWords, buffer, size - nWords);
-	updateStarts<<<numBlocks, blockdim>>>(starts, nWords);
+	transform_buffer<<<numBlocks, blockdim>>>(d_in, size, starts, nWords, buffer, size - nWords);
+	update_starts<<<numBlocks, blockdim>>>(starts, nWords);
 
 	char *hbuffer = (char *)malloc((size - nWords + 1) * sizeof(char));
 
@@ -168,30 +177,53 @@ std::pair<std::string, std::vector<size_t>> parseString(const std::string &input
 	return {h_buffer, h_starts};
 }
 
+std::pair<std::string, std::vector<size_t>> parse_string_cpu(const std::string &input)
+{
+	std::string buffer;         //! Final buffer with no spaces
+	std::vector<size_t> starts; //! Array of start indices + count.
+
+	starts.push_back(0);
+	for(char c : input) {
+		if (c == ' ')
+			starts.push_back(buffer.size());
+		else
+			buffer.push_back(c);
+	}
+	starts.push_back(buffer.size());
+
+	size_t nWords = starts.size() - 1;
+
+	return {buffer, starts};
+}
+
+/**
+    Apache class helper just to simplify the user tests code.
+
+    This class has two constructors one uses cpu scan and the other
+    uses gpu.
+    It also implements the == operator for testing purposes.
+ **/
 class apache_string {
-	std::string buffer;
-	std::vector<size_t> starts;
+	std::string buffer;         //! Final buffer with no spaces
+	std::vector<size_t> starts; //! Array of start indices + count.
+
+	apache_string() = default;
 
 public:
-	apache_string(const std::string &input)
+	template<int I = 0>
+	static apache_string factory(const std::string &input)
 	{
-		starts.push_back(0);
-		for(char c : input) {
-			if (c == ' ')
-				starts.push_back(buffer.size());
-			else
-				buffer.push_back(c);
+		auto val = apache_string();
+		if constexpr (I == 0) {
+			auto [_buffer, _starts] = parse_string_cpu(input);
+			val.buffer = std::move(_buffer);
+			val.starts = std::move(_starts);
+		} else {
+			auto [_buffer, _starts] = parse_string_gpu<I>(input);
+			val.buffer = std::move(_buffer);
+			val.starts = std::move(_starts);
 		}
-		starts.push_back(buffer.size());
-
-		size_t nWords = starts.size() - 1;
-	}
-
-	apache_string(const std::string &input, size_t blockdim)
-	{
-		auto [_buffer, _starts] = parseString<32>(input);
-		buffer = std::move(_buffer);
-		starts = std::move(_starts);
+		return val;
 	}
 
 	friend std::ostream &operator <<(std::ostream &out, const apache_string &str)
