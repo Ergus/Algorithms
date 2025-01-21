@@ -143,7 +143,9 @@ void scan_internal(T *data, int n, T *o_data)
 	// When we can scan in a single pass, then that will be more efficient
 	if (n <= 1024) {
 		// Compute a blockdim power of two.
-		int bd = 2 * get_pow_2(n);
+		int bd = get_pow_2(n);
+		if (bd < n)
+			bd *= 2;
 
 		prescan<<<1, bd, 2 * bd * sizeof(T)>>>(data, n, o_data);
 
