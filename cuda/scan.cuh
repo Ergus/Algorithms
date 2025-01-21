@@ -21,6 +21,7 @@
 #define CONFLICT_FREE_OFFSET(n)						\
 	((n) >> NUM_BANKS + (n) >> (2 * LOG_NUM_BANKS)) 
 
+#include "utils.h"
 
 // int ai = thid;
 // int bi = thid + (n/2);
@@ -142,9 +143,7 @@ void scan_internal(T *data, int n, T *o_data)
 	// When we can scan in a single pass, then that will be more efficient
 	if (n <= 1024) {
 		// Compute a blockdim power of two.
-		const double half = (double) n / 2.0;
-		double exponent = std::ceil(log2(half));
-		int bd = std::pow(2, exponent);
+		int bd = 2 * get_pow_2(n);
 
 		prescan<<<1, bd, 2 * bd * sizeof(T)>>>(data, n, o_data);
 
