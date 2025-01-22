@@ -16,19 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <functional>
-
-template <typename T>
-__device__ T __unit(const T& a)
-{
-	return a;
-}
-
-template <typename T>
-__device__ T __sum(const T& a,const T& b)
-{
-	return a + b;
-}
+#include "utils.cuh"
 
 /**
    Reduction using shared memory
@@ -140,14 +128,6 @@ __global__ void reduceNWarp(T *data, const size_t size, T* output)
 	}
 }
 
-float myGetElapsed(const cudaEvent_t &eStart, const cudaEvent_t &eStop)
-{
-	cudaEventSynchronize(eStop);
-	float milliseconds = 0;
-	cudaEventElapsedTime(&milliseconds, eStart, eStop);
-	return milliseconds;
-}
-
 /**
    @tparam Tfrac relation of rate data/thread to call. If the kernel accesses 2
    data elements / then this value must be two in order to create less useless
@@ -248,7 +228,7 @@ typename T::value_type reduceFun2(T start, T end, Op fun, Op fun2)
 /**
    Simple wrapper overload for reduceFun2.
 
-   This is only a wrapper around reduceFun2 where fun == fun2. ALl the other
+   This is only a wrapper around reduceFun2 where fun == fun2. All the other
    parameters are the same than reduceFun2.
  */
 template <int blockdim, int Tfrac, typename T, typename Op>

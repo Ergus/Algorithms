@@ -53,7 +53,7 @@ __global__ void prescan(const T *idata, int size, T *odata, T *tmp = nullptr)
 	temp[tid + blockDim.x] = (gidx2 < size ? idata[gidx2] : 0);
 
 	__syncthreads();
-	const T localLast = temp[2 * blockDim.x - 1];
+	const T localLast = temp[dataSize - 1];
 
 	const int tid2 = 2 * tid + 1;
 
@@ -156,10 +156,13 @@ void scan_internal(T *data, int n, T *o_data)
 
 		const size_t sharedSize = blockDataDim * sizeof(T);
 
+		// Scan / group
 		prescan<<<nblocks, blockdim, sharedSize>>>(data, n, o_data, o_tmp);
 
+		// Now scan the indices of sums/group
 		scan_internal<blockdim, T>(o_tmp, nblocks, o_tmp);
 
+		// update the offsets.
 		postscan<<<nblocks, blockdim>>>(o_data, n, o_tmp);
 
 		cudaFree(o_tmp);

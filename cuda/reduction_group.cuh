@@ -23,7 +23,7 @@
 namespace cg = cooperative_groups;
 
 template <typename T, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
-__device__ void reduceNGroupInternal(T *data, const size_t size, T* output)
+__device__ void reduceGroupInternal(T *data, const size_t size, T* output)
 {
     extern __shared__ T sharedData[]; // must have blockdim
 
@@ -67,12 +67,12 @@ __device__ void reduceNGroupInternal(T *data, const size_t size, T* output)
 }
 
 template <typename T, T (*TOp)(const T&), T (*TBOp)(const T&, const T&)>
-__global__ void reduceNGroup(T *data, int size, T* output)
+__global__ void reduceGroup(T *data, int size, T* output)
 {
 	 cg::grid_group grid = cg::this_grid();
 	 cg::thread_block cta = cg::this_thread_block();
 
-	 reduceNGroupInternal<T, TOp, TBOp>(data, size, output);
+	 reduceGroupInternal<T, TOp, TBOp>(data, size, output);
 	 grid.sync();
 
 	 const int nBlocks = grid.num_blocks();
@@ -81,7 +81,7 @@ __global__ void reduceNGroup(T *data, int size, T* output)
 	 assert(nBlocks <= cta.size());
 
 	 if ((nBlocks > 1) && (cta.group_index().x == 0))
-		 reduceNGroupInternal<T, TOp, TBOp>(output, nBlocks, output);
+		 reduceGroupInternal<T, TOp, TBOp>(output, nBlocks, output);
 }
 
 
@@ -180,5 +180,5 @@ template <typename T>
 typename T::value_type reduceGroup(T start, T end)
 {
 	using type = typename T::value_type;
-	return reduceFunGroup(start, end, reduceNGroup<type, __unit<type>, __sum<type>>);
+	return reduceFunGroup(start, end, reduceGroup<type, __unit<type>, __sum<type>>);
 }
