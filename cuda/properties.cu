@@ -15,7 +15,7 @@ int main() {
 		printf("Device Number: %d\n", i);
 		printf("  Device name: %s\n", prop.name);
 
-		printf("  Compute Capability minor-major: %d-%d\n", prop.minor, prop.major);
+		printf("  Compute Capability: %d.%d\n", prop.major, prop.minor);
 		printf("  Warp-size: %d\n", prop.warpSize);
 
 		const int* mgs = prop.maxGridSize;
@@ -48,6 +48,27 @@ int main() {
 		printf("  Stream priorities supported: %s\n", prop.streamPrioritiesSupported ? "yes" : "no");
 		printf("  Unified Addressing: %s\n", prop.unifiedAddressing ? "yes" : "no");
 		printf("  Support Managed Memory: %s\n", prop.managedMemory ? "yes" : "no");
+
+		if (prop.major >= 7) { // Check if compute capability is 7.0 or higher
+
+			int tc_per_sm = 0;
+			switch (prop.major) {
+			case 7:
+				tc_per_sm = 8;
+				break;
+			case 8:
+				tc_per_sm = 4;
+				break;
+			default:
+				printf("Cannot compute cores per sm\n");
+			}
+
+			if (tc_per_sm != 0) {
+				printf("  Tensor Cores (Per SM): %d (Estimated)\n", tc_per_sm);
+
+				printf("  Total Tensor Cores %d (Estimated)\n", tc_per_sm * prop.multiProcessorCount);
+			}
+		}
 	}
 
 	return 0;
