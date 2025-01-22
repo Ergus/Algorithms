@@ -179,6 +179,7 @@ void scan_group(Ti start, Ti end, Ti o_start)
 	const size_t size = std::distance(start, end);
 	type *h_output = &*o_start;
 	
+	const type last_value = h_data[size - 1];
 	// Compute max concurrent occupancy combination
 	// Compute blockSize; The grid size from here may not be accurate enough because
 	// we need to use the sharedSize to get the accurate value for numBlocksPerSm
@@ -265,7 +266,7 @@ void scan_group(Ti start, Ti end, Ti o_start)
 		cudaMemcpy(h_output, d_data, size * sizeof(type), cudaMemcpyDeviceToHost);
 	else {
 		cudaMemcpy(h_output, d_data + 1, (size - 1) * sizeof(type), cudaMemcpyDeviceToHost);
-		h_output[size - 1] = h_output[size - 2] + h_data[size - 1];
+		h_output[size - 1] = h_output[size - 2] + last_value;
 	}
 
 	cudaFree(d_result);

@@ -42,32 +42,26 @@ int main(int argc, char **argv)
 		std::cout << "Initial:\n" << v << std::endl;
 
 	// host exclusive scan
+	argparser::time t1("cpu copy");
 	std::vector<int> v1(v.size());
+	t1.stop();
+
+	argparser::time t2("cpu exclusive_scan");
 	std::exclusive_scan(v.begin(), v.end(), v1.begin(), 0);
+	t2.stop();
 
 	if (size <= printlimit)
 		std::cout << "C++ exclusive:\n"<< v1 << std::endl;
 
 	// device scan
 	std::vector<int> v2(v);
+	argparser::time t3("gpu exclusive_scan");
 	exclusive_scan_group(v2.begin(), v2.end(), v2.begin());
+	t3.stop();
 
 	if (size <= printlimit)
 		std::cout << "Cuda exclusive:\n" << v2 << std::endl;
 
-	bool first = true;
-	if (v1 != v2) {
-		for (size_t i = 0; i < size; ++i) {
-			if (v1[i] != v2[i]) {
-				if (first){
-					std::cout << i - 1 << ":: " << v1[i-1] << " != " << v2[i-1] << std::endl;
-					first = false;
-				}
-				std::cout << i << ": " << v1[i] << " != " << v2[i] << std::endl;
-			}
-		}
-	}
-	
 	myassert(v1 == v2);
 
 	// host inclusive scan
@@ -84,6 +78,8 @@ int main(int argc, char **argv)
 
 	myassert(v1 == v2);
 
+	argparser::report<>();
+	
 	return 0;
 }
 
