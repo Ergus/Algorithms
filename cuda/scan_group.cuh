@@ -243,7 +243,7 @@ void scan_group(Ti start, Ti end, Ti o_start)
 	cudaEventRecord(eStart);
 	cudaMemcpy(d_data, h_data, size * sizeof(type), cudaMemcpyHostToDevice);
 	cudaEventRecord(eStop);
-	fprintf(stderr, "# cudaMemcpy time %f mS\n", myGetElapsed(eStart, eStop));
+	fprintf(stderr, "# cudaMemcpy h2d time %f mS\n", myGetElapsed(eStart, eStop));
 
 	// To make a single cuda malloc
 	type *d_result = &d_data[size];
@@ -261,18 +261,21 @@ void scan_group(Ti start, Ti end, Ti o_start)
 		cudaDeviceSynchronize();
 		printf("CUDA Error: %s\n", cudaGetErrorString(err));
 	}
+	fprintf(stderr, "# Kernel time %f mS\n", myGetElapsed(eStart, eStop));
 
+	cudaEventRecord(eStart);
 	if (EXCLUSIVE)
 		cudaMemcpy(h_output, d_data, size * sizeof(type), cudaMemcpyDeviceToHost);
 	else {
 		cudaMemcpy(h_output, d_data + 1, (size - 1) * sizeof(type), cudaMemcpyDeviceToHost);
 		h_output[size - 1] = h_output[size - 2] + last_value;
 	}
+	cudaEventRecord(eStop);
+	fprintf(stderr, "# cudaMemcpy d2h  time %f mS\n", myGetElapsed(eStart, eStop));
 
 	cudaFree(d_result);
 	cudaFree(d_data);
 
-	fprintf(stderr, "# Kernel time %f mS\n", myGetElapsed(eStart, eStop));
 }
 
 template <typename T>
