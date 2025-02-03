@@ -23,6 +23,18 @@ float myGetElapsed(const cudaEvent_t &eStart, const cudaEvent_t &eStop)
 	return milliseconds;
 }
 
+class cudaErrorCheck {
+public:
+	cudaErrorCheck &operator=(cudaError_t err)
+	{
+		if (err != cudaSuccess) {
+			cudaDeviceSynchronize();
+			printf("CUDA Error: %s\n", cudaGetErrorString(err));
+		}
+		return *this;
+	}
+};
+
 
 template <typename T>
 __device__ T __unit(const T& a)
