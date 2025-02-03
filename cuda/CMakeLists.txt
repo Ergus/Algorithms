@@ -61,4 +61,8 @@ foreach(X 32 64 69 512 600 2048 131072 4194304 67108864)
     add_test(NAME "cuda_apache_string_${X}" COMMAND $<TARGET_FILE:cuda_apache_string> ${X})
 endforeach()
 
+foreach(X 32 64 512 1024 2048) # 4192 takes too long in cpu
+    add_test(NAME "cuda_poisson_${X}" COMMAND $<TARGET_FILE:cuda_poisson> ${X})
+endforeach()
+
 
