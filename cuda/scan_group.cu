@@ -76,6 +76,21 @@ int main(int argc, char **argv)
 	if (size <= printlimit)
 		std::cout << "Cuda inclusive:\n" << v2 << std::endl;
 
+	bool first = true;
+	if (v1 != v2) {
+		for (size_t i = 0; i < size; ++i) {
+			if (v1[i] != v2[i]) {
+				if (first){
+					std::cout << i - 1 << ":: " << v1[i-1] << " != " << v2[i-1] << std::endl;
+					first = false;
+				}
+				std::cout << i << ": " << v1[i] << " != " << v2[i] << std::endl;
+			}
+		}
+	}
+
+
+
 	myassert(v1 == v2);
 
 	argparser::report<>();

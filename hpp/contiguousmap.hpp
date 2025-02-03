@@ -93,7 +93,7 @@ public:
 
 			if (it == std::numeric_limits<K>::max())
 				break;
-		}
+        }
 
 		return it;
 	}
@@ -101,8 +101,8 @@ public:
 	/** Get the element with idx
 
         This function always returns a pair, either initialized or not.
-		Returned pair needs to be initialized by the function consumer
-		in case of non-const version
+        Returned pair needs to be initialized by the function consumer
+        in case of non-const version
 	 **/
 	const sub_type get(size_t idx) const
 	{

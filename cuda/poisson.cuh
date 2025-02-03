@@ -176,19 +176,16 @@ __global__ void poisson_solver(
 	__shared__ T sharedData[34 * 34];
 	BorderMatrix<T> shared_matrix(sharedData, 32, 32);
 
-	__shared__ T lsum;
-
 	int counter = 0;
 
 	const int tidx = cta.thread_index().x;
 	const int tidy = cta.thread_index().y;
 
 	do {
+		T tsum = 0;
+
 		if (grid.thread_rank() == 0)
 			data->sum = 0;
-
-		if (cta.thread_rank() == 0)
-			lsum = 0;
 
 		grid.sync();
 
@@ -198,31 +195,29 @@ __global__ void poisson_solver(
 				shared_matrix.copy(cta, imatrix, (i / 32) * 32, (j / 32) * 32);
 				cta.sync();
 
-				T oldval = shared_matrix.get(tidy, tidx);
+				const T oldval = shared_matrix.get(tidy, tidx);
 
 				const T newval = 0.25 * (shared_matrix.get(tidy - 1, tidx)
 										 + shared_matrix.get(tidy + 1, tidx)
 										 + shared_matrix.get(tidy, tidx - 1)
 										 + shared_matrix.get(tidy, tidx + 1));
 
-				// Reuse the variable to save registers
-				T diff = newval - oldval;
-
-				// Sum all values in cta.thread_rank() == 0
-				diff = reduce_block(diff * diff);
+				// Sum all contributions in this thread
+				tsum += ((newval - oldval) * (newval - oldval));
 
 				imatrix.set(i, j, newval);
-
-				if (cta.thread_rank() == 0)
-					lsum += diff;
 			}
 		}
 
+		// Reduction per cta
+		tsum = reduce_block(tsum);
+
 		if (cta.thread_rank() == 0) {
-			atomicAdd(&data->sum, lsum);
+			// Finally add to the global variable
+			atomicAdd(&data->sum, tsum);
 		}
 
-		counter++;
+		++counter;
 
 		grid.sync();
 
