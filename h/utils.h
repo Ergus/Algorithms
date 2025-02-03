@@ -24,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <limits>
+#include <cmath>
 
 #define myassert(cond) {										\
 		if (!(cond)) {											\
@@ -164,4 +165,44 @@ unsigned int get_pow_2(unsigned int i)
 		tmp = i & (i - 1);
 	}
 	return i;
+}
+
+
+std::vector<int> prime_factorization(int n)
+{
+    std::vector<int> result;
+
+    // Handle factor 2 separately
+    while (n % 2 == 0) {
+        result.push_back(2);
+        n /= 2;
+    }
+
+    // Check for odd factors
+    for (int i = 3; i * i <= n; i += 2) {
+        while (n % i == 0) {
+            result.push_back(i);
+            n /= i;
+        }
+    }
+
+    // If n is still greater than 2, it's a prime number
+    if (n > 2) {
+        result.push_back(n);
+    }
+
+	return result;
+}
+
+std::pair<int, int> closest_divisors(int n)
+{
+	assert(n > 1);
+    int sqrt_n = std::sqrt(n);
+    for (int i = sqrt_n; i >= 1; --i) {
+        if (n % i == 0) {
+            return {i, n / i};
+        }
+    }
+	assert(n == 1);
+    return {1, n}; // Should never reach here for n >= 1
 }
