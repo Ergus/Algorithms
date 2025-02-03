@@ -92,8 +92,6 @@ poisson_data<T> poisson_cpu(
 		for (int i = 0; i < input._rows; ++i) {
 			for (int j = 0; j < input._cols; ++j) {
 
-				T oldval = output.get(i, j);
-
 				T newval = 0.25 * (input.get(i - 1, j)
 								   + input.get(i + 1, j)
 								   + input.get(i, j - 1)
@@ -101,7 +99,7 @@ poisson_data<T> poisson_cpu(
 
 				output.set(i, j, newval);
 
-				T diff = (newval - oldval);
+				T diff = (newval - input.get(i, j));
 				ret.sum += (diff * diff);
 			}
 		}
