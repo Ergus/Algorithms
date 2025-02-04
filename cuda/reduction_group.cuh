@@ -164,6 +164,15 @@ typename T::value_type reduceFunGroup(T start, T end, Op fun)
 	cudaFree(d_result);
 	cudaFree(d_data);
 
+	// Given that minGridSize is expected to be a very small number
+	// ~20 - 100 it is more efficient just transfer them here and
+	// perform the reduction.  However, this code is not 100% correct
+	// because this assumes that TBop is __sum, which is actually not
+	// correct.
+	// On the other hand, this avoids making a grid-sync which is actually
+	// a source of problems in debug mode because it creates a deadlock
+	// (which I think is actually a cuda runtime bug because the gridsize
+	// is properly computed and the error does not happen in release mode.)
 	return std::reduce(result.begin(), result.end());
 }
 
