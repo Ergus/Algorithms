@@ -52,8 +52,8 @@ __global__ void reduceGroup(T *data, int size, T* output)
         localValue = TBOp(localValue, TOp(data[idx]));
 
 	#pragma unroll
-	for (int offset = 16; offset > 0; offset >>= 1)
-		localValue = TBOp(localValue ,__shfl_down_sync(0xffffffff, localValue, offset));
+	for (int offset = warp.size() / 2; offset > 0; offset >>= 1)
+		localValue = TBOp(localValue , warp.shfl_down(localValue, offset));
 
 	if (lane == 0)
 		sharedData[wid] = localValue;
@@ -64,8 +64,8 @@ __global__ void reduceGroup(T *data, int size, T* output)
 		localValue = (lane < warp.meta_group_size()) ? sharedData[lane] : 0;
 
 		#pragma unroll
-		for (int offset = 16; offset > 0; offset >>= 1)
-			localValue = TBOp(localValue ,__shfl_down_sync(0xffffffff, localValue, offset));
+		for (int offset = warp.size() / 2; offset > 0; offset >>= 1)
+			localValue = TBOp(localValue , warp.shfl_down(localValue, offset));
 
 		if (lane == 0) {
 			output[grid.block_rank()] = localValue;
