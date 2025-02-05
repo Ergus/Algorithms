@@ -60,6 +60,38 @@ __device__ void swap(T &v1, T &v2)
 	v2 = tmp;
 }
 
+
+inline __device__ double atomicMax(double *addr, double val) {
+    unsigned long long *addr_as_ull = (unsigned long long*)addr;
+    unsigned long long old = *addr_as_ull, assumed;
+
+    do {
+        assumed = old;
+        double d_old = __longlong_as_double(old);
+        if (d_old >= val)
+			break; // Already the min value
+        old = atomicCAS(addr_as_ull, assumed, __double_as_longlong(val));
+    } while (assumed != old);
+
+    return __longlong_as_double(old);
+}
+
+inline __device__ double atomicMin(double *addr, double val) {
+    unsigned long long *addr_as_ull = (unsigned long long*)addr;
+    unsigned long long old = *addr_as_ull, assumed;
+
+    do {
+        assumed = old;
+        double d_old = __longlong_as_double(old);
+        if (d_old <= val)
+			break; // Already the min value
+        old = atomicCAS(addr_as_ull, assumed, __double_as_longlong(val));
+    } while (assumed != old);
+
+    return __longlong_as_double(old);
+}
+
+
 template <typename TFunc>
 std::pair<dim3, dim3> get_grid_block_dims(
 	size_t array_size,

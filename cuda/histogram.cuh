@@ -27,42 +27,15 @@ namespace cg = cooperative_groups;
 #include "utils.cuh"
 #include <iostream>
 
-template<typename T>
-__device__ T atomicMax(T *addr, T val);
+/**
+   This is the basic histogram struct
 
-template<typename T>
-__device__ T atomicMin(T *addr, T val);
-
-template <>
-__device__ double atomicMax<double>(double *addr, double val) {
-    unsigned long long *addr_as_ull = (unsigned long long*)addr;
-    unsigned long long old = *addr_as_ull, assumed;
-
-    do {
-        assumed = old;
-        double d_old = __longlong_as_double(old);
-        if (d_old >= val) break; // Already the min value
-        old = atomicCAS(addr_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
-template <>
-__device__ double atomicMin<double>(double *addr, double val) {
-    unsigned long long *addr_as_ull = (unsigned long long*)addr;
-    unsigned long long old = *addr_as_ull, assumed;
-
-    do {
-        assumed = old;
-        double d_old = __longlong_as_double(old);
-        if (d_old <= val) break; // Already the min value
-        old = atomicCAS(addr_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
+   This does not constructs or destruct anything, it just stores
+   histogram information, but the inderlying array may be in the gpu
+   or cpu memory.
+   TODO: I will improve this in the near future to work similarly for
+   both and RAII memory.
+ **/
 template <typename T, typename Tbins>
 struct histogram {
 	T hmin, hmax;
@@ -115,6 +88,7 @@ using hist_ptr = histogram<T, unsigned int *>;
 
 template<typename T>
 using hist_vec = histogram<T, std::vector<unsigned int>>;
+
 
 template<typename T>
 __global__ void get_min_max(const T *data, const size_t size, hist_ptr<T>* out)
@@ -169,8 +143,8 @@ __global__ void get_min_max(const T *data, const size_t size, hist_ptr<T>* out)
 		}
 
 		if (lane == 0) {
-			atomicMin<T>(&out->hmin, lmin);
-			atomicMax<T>(&out->hmax, lmax);
+			atomicMin(&out->hmin, lmin);
+			atomicMax(&out->hmax, lmax);
 		}
 	}
 }
