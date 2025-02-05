@@ -30,6 +30,7 @@ public:
 		if (err != cudaSuccess) {
 			cudaDeviceSynchronize();
 			printf("CUDA Error: %s\n", cudaGetErrorString(err));
+			abort();
 		}
 		return *this;
 	}
@@ -57,4 +58,56 @@ __device__ void swap(T &v1, T &v2)
 	T tmp = v1;
 	v1 = v2;
 	v2 = tmp;
+}
+
+template <typename TFunc>
+std::pair<dim3, dim3> get_grid_block_dims(
+	size_t array_size,
+	TFunc func,
+	int dynamic_shared_mem,
+	int  block_size_limit = 0
+) {
+	cudaErrorCheck err;
+
+	// Compute max concurrent occupancy combination
+	// Compute blockSize; The grid size from here may not be accurate enough because
+	// we need to use the sharedSize to get the accurate value for numBlocksPerSm
+	int minGridSize = 0, blockSize = 0;
+	err = cudaOccupancyMaxPotentialBlockSize(
+		&minGridSize,
+		&blockSize,
+		func,
+		dynamic_shared_mem,
+		block_size_limit
+	);
+	assert(blockSize > 0);
+	assert(minGridSize > 0);
+
+	// Now get the SM x Blocks_per_sm  ==================
+
+	// Compute how many blocks fit in an SM
+	int numBlocksPerSm = 0;
+	err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+		&numBlocksPerSm,
+		func,
+		blockSize,
+		0
+	);
+
+	// Now count how many SMs I have
+	int numSMs;
+    err = cudaDeviceGetAttribute(&numSMs, cudaDevAttrMultiProcessorCount, 0);
+
+	if (minGridSize != numSMs * numBlocksPerSm) {
+		fprintf(stderr, "minGridSize(%d) != numSMs(%d) * numBlocksPerSm(%d)\n",
+			minGridSize, numSMs, numBlocksPerSm);
+	}
+
+	int grid = std::min({
+	    minGridSize,                                        // given by cudaOccupancyMaxPotentialBlockSizeVariableSMem
+		numSMs * numBlocksPerSm,
+	    (int)((array_size + blockSize - 1) / blockSize)   // given by cudaOccupancyMaxActiveBlocksPerMultiprocessor
+	});
+
+	return {dim3(grid, 1, 1), dim3(blockSize, 1, 1)};
 }
