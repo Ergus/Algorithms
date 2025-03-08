@@ -36,28 +36,23 @@ int main()
 		mymap[k] = v;
 	}
 
+	// std::cout << "\nPrint internal vector" << std::endl;
+	// for (const auto &node: mymap.get_internal_vector()){
+	// 	std::cout << node << std::endl;
+	// }
+
 	std::cout << "\nCompare some values from reference" << std::endl;
 	for (auto &[k, v] : reference) {
 		myassert(mymap[k] == v);
 	}
 
-	// std::cout << "\nIterate recursive" << std::endl;
-	// mymap.traverse_dfs(
-	// 	0,
-	// 	[](size_t i, const std::pair<int, int>& p)
-	// 	{
-	// 		std::cout << i << " -> " << p << std::endl;
-	// 	}
-	// );
-
-	// std::cout << "\nIterate non-recursive" << std::endl;
-	// mymap.traverse_dfs_it(
-	// 	0,
-	// 	[](size_t i, const std::pair<int, int>& p)
-	// 	{
-	// 		std::cout << i << " -> " << p << std::endl;
-	// 	}
-	// );
+	std::cout << "\nIterate non-recursive" << std::endl;
+	mymap.traverse(
+		[](const std::pair<int, int>& p)
+		{
+			std::cout << p.first << " -> " << p.second << std::endl;
+		}
+	);
 
 	// std::cout << "\nIterate with iterator" << std::endl;
 	// for (const auto& it : mymap) {

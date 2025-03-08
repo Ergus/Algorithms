@@ -19,7 +19,17 @@
 #include <optional>
 #include <stdexcept>
 
-template<typename key_t, typename value_t, size_t chunk_size = 10>
+/**
+   This is a vector map which stores values in chunks
+
+   While this sounds sumy it actually improves performance because the
+   binary tree search O(log(n)) is immediately reduces n by a factor of
+   chunk_size.  And within the chunks the access is O(1), but also it
+   makes a more efficient use of cache lines and memory access. However,
+   if the values are very sparse this wastes a lot of memory as the
+   chunks are fully reserved.
+ **/
+template<typename key_t, typename value_t, size_t chunk_size = 32>
 class vectorMap {
 
 	struct storage_t {
@@ -34,22 +44,22 @@ class vectorMap {
 			assert(_start % chunk_size == 0);
 		}
 
-		bool operator<(key_t key)
+		bool operator<(key_t key) const
 		{
 			return key < _start;
 		}
 
-		bool operator>(key_t key)
+		bool operator>(key_t key) const
 		{
 			return key >= (key_t)(_start + chunk_size);
 		}
 
-		bool operator==(key_t key)
+		bool operator==(key_t key) const
 		{
 			return !(*this < key || *this > key);
 		}
 
-		bool operator!=(key_t key)
+		bool operator!=(key_t key) const
 		{
 			return (*this < key || *this > key);
 		}
@@ -65,6 +75,14 @@ class vectorMap {
 
 			return val;
 		}
+
+		const std::optional<value_t> &at(key_t key) const
+		{
+			if (*this != key)
+				throw std::out_of_range("Failed to get bounds");
+
+			return _values[key - _start];
+		}
 	};
 
 	std::map<key_t, storage_t> storage;
@@ -79,7 +97,7 @@ public:
 
 		auto lb_it = storage.lower_bound(start);
 
-		if (lb_it->first != key) {
+		if (lb_it->first != start) {
 			lb_it = storage.emplace_hint(lb_it, start, start);
 		}
 
@@ -87,5 +105,21 @@ public:
 		assert(val.has_value());
 
 		return val.value();
+	}
+
+
+	template <typename F>
+	void traverse(F fun) const
+	{
+		for (const std::pair<const key_t, storage_t> &entry_pair : storage) {
+			for (size_t i = 0; i < chunk_size; ++i) {
+
+				key_t key = entry_pair.second._start + i;
+				const std::optional<value_t> &entry = entry_pair.second.at(key);
+
+				if (entry.has_value())
+					fun(std::pair<key_t, value_t>(key, entry.value()));
+			}
+		}
 	}
 };
