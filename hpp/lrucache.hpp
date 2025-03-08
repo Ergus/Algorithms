@@ -72,17 +72,29 @@ class lrucache {
 
 	};
 
-	size_t _limit;                           // cache elements limit
+	const size_t _capacity;                  // cache elements limit
 	std::unordered_map<K, map_node_t> _map;  // map to access throw keys
-	access_list_t _access;                   // Maybe we may use mutable here to make other functions const
+	mutable access_list_t _access;
 
-	void register_access(typename std::unordered_map<K, map_node_t>::iterator map_node)
+	/**
+	   Update the cache to register a new access.
+
+       This function moves the iterator associated with access_list_t
+       to the end of the list.
+	 **/
+	void register_access(typename std::unordered_map<K, map_node_t>::iterator map_node) const
 	{
+		// The access was already the most recent one, so, no update needed
 		if (map_node->second.access == _access.end())
 			return;
 
-		_access.erase(map_node->second.access);
-		map_node->second.access = _access.emplace(_access.end(), map_node);
+		// Trick to update the access in two steps
+		_access.splice(_access.end(), _access, map_node->second.access);
+		map_node->second.access = std::prev(_access.end());
+		// Not sure why there is not a node move function for linked list, which will avoid
+		// allocation-deallocation of a node.
+		//_access.erase(map_node->second.access);  // Remove the node from the list
+		//_access.emplace(_access.end(), map_node);
 	}
 
 public:
@@ -93,11 +105,18 @@ public:
 	using iterator = typename std::unordered_map<K, map_node_t>::iterator;
 	using const_iterator = typename std::unordered_map<K, map_node_t>::const_iterator;
 
-	lrucache(size_t limit) : _limit(limit)
+	lrucache(size_t capacity) : _capacity(capacity)
 	{
-		_map.reserve(limit);
+		_map.reserve(capacity);
 	}
 
+	/**
+	   Assign [key] = value
+
+       If key already exists, replace existing value, else insert a
+	   new one.  When .size() == capacity, this function removes the
+	   least recently used element before inserting a new one.
+	 */
 	iterator push(K key, V value)
 	{
 		iterator it = _map.find(key);
@@ -105,11 +124,11 @@ public:
 		// Insert a new entry when no key existed.
 		if (it == _map.end()) {
 			// If the size is already in the limit, update it.
-			if (_map.size() == _limit)
+			if (_map.size() == _capacity)
 				erase(_access.front()); // remove lru
 
-			assert(_map.size() < _limit);
-			assert(_access.size() < _limit);
+			assert(_map.size() < _capacity);
+			assert(_access.size() < _capacity);
 			assert(_access.size() == _map.size());
 
 			// Ok now insert the new entry and register the insertion as an access.
@@ -178,9 +197,9 @@ public:
 		return _map.size();
 	}
 
-	size_t max_size() const
+	size_t capacity() const
 	{
-		return _limit;
+		return _capacity;
 	}
 
 	const_iterator begin() const
