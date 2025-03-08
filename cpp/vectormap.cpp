@@ -54,6 +54,19 @@ int main()
 		}
 	);
 
+	std::cout << "\nIterate non-recursive" << std::endl;
+	mymap.traverse_chunks(
+		[](int key, const auto &chunk)
+		{
+			std::cout << key << ": " ;
+			for (size_t i = 0; i < chunk.size(); ++i) {
+				if (chunk[i].has_value())
+					std::cout << std::pair(key + i, chunk[i].value()) << ", ";
+			}
+			std::cout << std::endl;
+		}
+	);
+
 	// std::cout << "\nIterate with iterator" << std::endl;
 	// for (const auto& it : mymap) {
 	// 	std::cout << it << std::endl;

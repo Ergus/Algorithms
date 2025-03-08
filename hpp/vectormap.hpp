@@ -107,6 +107,19 @@ public:
 		return val.value();
 	}
 
+	/**
+	   Traverse the container chunks with a function
+
+       This is intended for debugging purposes
+	 **/
+	template <typename F>
+	void traverse_chunks(F fun) const
+	{
+		for (const std::pair<const key_t, storage_t> &entry_pair : storage) {
+			fun(entry_pair.first, entry_pair.second._values);
+		}
+	}
+
 
 	template <typename F>
 	void traverse(F fun) const
