@@ -45,6 +45,7 @@ int main()
 				if (chunk[i].has_value()) {
 					// I only use a pair here to use the overloaded operator<<
 					std::cout << std::pair(key + i, chunk[i].value()) << ", ";
+					myassert(2 * (key + i) == (size_t)chunk[i].value());
 				}
 			}
 			std::cout << std::endl;
@@ -61,6 +62,7 @@ int main()
 		[](const std::pair<int, int>& p)
 		{
 			std::cout << p.first << " -> " << p.second << std::endl;
+			myassert(2 * p.first == p.second);
 		}
 	);
 
