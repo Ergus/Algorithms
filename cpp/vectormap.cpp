@@ -36,10 +36,20 @@ int main()
 		mymap[k] = v;
 	}
 
-	// std::cout << "\nPrint internal vector" << std::endl;
-	// for (const auto &node: mymap.get_internal_vector()){
-	// 	std::cout << node << std::endl;
-	// }
+	std::cout << "\nIterate over the chunks to see internal storage" << std::endl;
+	mymap.traverse_chunks(
+		[](int key, const auto &chunk)
+		{
+			std::cout << key << ": " ;
+			for (size_t i = 0; i < chunk.size(); ++i) {
+				if (chunk[i].has_value()) {
+					// I only use a pair here to use the overloaded operator<<
+					std::cout << std::pair(key + i, chunk[i].value()) << ", ";
+				}
+			}
+			std::cout << std::endl;
+		}
+	);
 
 	std::cout << "\nCompare some values from reference" << std::endl;
 	for (auto &[k, v] : reference) {
@@ -51,19 +61,6 @@ int main()
 		[](const std::pair<int, int>& p)
 		{
 			std::cout << p.first << " -> " << p.second << std::endl;
-		}
-	);
-
-	std::cout << "\nIterate non-recursive" << std::endl;
-	mymap.traverse_chunks(
-		[](int key, const auto &chunk)
-		{
-			std::cout << key << ": " ;
-			for (size_t i = 0; i < chunk.size(); ++i) {
-				if (chunk[i].has_value())
-					std::cout << std::pair(key + i, chunk[i].value()) << ", ";
-			}
-			std::cout << std::endl;
 		}
 	);
 
