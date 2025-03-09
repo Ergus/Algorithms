@@ -297,6 +297,49 @@ namespace my {
 			while (_taskCounter.load() > 0)
 				_twCondVar.wait(lk);
 		}
+
+		struct PoolScopeData {
+			threadpool_t &threadpool;
+			std::atomic<size_t> num_pending_tasks {0};
+			std::mutex	scope_mutex;
+			std::condition_variable cv;
+
+
+			PoolScopeData(threadpool_t &thread_pool)
+				: threadpool(thread_pool)
+			{
+			}
+
+			template<typename TFun>
+			void spawn(TFun f)
+			{
+				num_pending_tasks.fetch_add(1);
+				threadpool.pushTask([&]()
+				{
+					f();
+
+					if (num_pending_tasks.fetch_sub(1) == 1) {
+						std::unique_lock lk(scope_mutex);
+						cv.notify_one();
+					}
+				});
+			}
+
+			void taskwait()
+			{
+				std::unique_lock lk(scope_mutex);
+				while (num_pending_tasks > 0)
+					cv.wait(lk);
+			}
+		};
+
+		void scope(std::function<void(PoolScopeData&)> f)
+		{
+			PoolScopeData scope(*this);
+			f(scope);
+			scope.taskwait();
+		}
+
 	};
 
 	template<class ForwardIt1, class ForwardIt2, class UnaryOp >
