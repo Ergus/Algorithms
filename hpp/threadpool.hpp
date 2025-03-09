@@ -8,11 +8,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <memory>
@@ -31,6 +31,12 @@
 
 namespace my {
 
+	/**
+	   The scheduler class which is actually a mutex protected queue.
+
+	   This threadpool works with work-stealing, so every task is
+	   enqueued and workers request new work when needed.
+	 **/
 	template<typename T>
 	class scheduler_t {
 		std::mutex _mutex;
@@ -66,13 +72,16 @@ namespace my {
 		}
 	};
 
-	/** Thread pool class.
-		This is a basic thread pool class implemented using only basic C++-20
-		features.  While the current compilers actually support parallel execution
-		policies, some of them have issues supporting parallel execution ones. This
-		is a sort of poor guy parallel execution implementation just for demonstration
-		purposes.
-	*/
+	/**
+	   Thread pool class.
+
+	   This is a basic thread pool class implemented using only basic
+	   C++-20 features.	 While the current compilers actually support
+	   parallel execution policies, some of them have issues
+	   supporting parallel execution ones. This is a sort of poor guy
+	   parallel execution implementation just for demonstration
+	   purposes.
+	**/
 	class threadpool_t {
 
 	private:
@@ -112,11 +121,12 @@ namespace my {
 			};
 
 			worker_t(const worker_t &other) = delete;  // because of the tread
-			worker_t(const worker_t &&other) = delete;  // because of the atomic
+			worker_t(const worker_t &&other) = delete;	// because of the atomic
 
 			worker_t(size_t id, threadpool_t &pool)
-				: _id(id), _parentPool(pool),
-				  _thread(&worker_t::workerFunction, this)
+				: _id(id),
+					_parentPool(pool),
+					_thread(&worker_t::workerFunction, this)
 			{}
 
 			~worker_t()
@@ -151,10 +161,12 @@ namespace my {
 			std::thread _thread;
 			friend class threadpool_t;
 
-			/** Spin function executed by the workers.
-				This function will run contiguously until the thread is notified
-				to die. The function also performs some sleep and wake_up when there
-				is not work to do.
+			/**
+			   Spin function executed by the workers.
+
+			   This function will run contiguously until the thread is notified
+			   to die. The function also performs some sleep and wake_up when there
+			   is not work to do.
 			*/
 			void workerFunction()
 			{
@@ -173,8 +185,8 @@ namespace my {
 					) {
 						task->evaluate();
 						++executed;
-						// When the counter is zero notify in case some thread is
-						// waiting.
+						// When the counter is zero notify in case
+						// some thread is waiting.
 						if (_parentPool._taskCounter.fetch_sub(1) == 1)
 							_parentPool._twCondVar.notify_one();
 					}
@@ -277,7 +289,7 @@ namespace my {
 			// When newSize < oldSize
 			if (newSize < oldSize)
 				forSome(newSize, oldSize,
-				        [](worker_t &worker) {
+						[](worker_t &worker) {
 							worker.setStatus(worker_t::status_t::finished);
 						});
 
@@ -298,7 +310,7 @@ namespace my {
 		{
 			_scheduler.push(
 				std::make_unique<task_t>(std::forward<F>(func),
-				                         std::forward<Params>(params)...)
+										 std::forward<Params>(params)...)
 			);
 			++_taskCounter;
 
@@ -351,8 +363,6 @@ namespace my {
 		{
 			_policy = policy;
 		}
-
-
 	};
 
 	template<class ForwardIt1, class ForwardIt2, class UnaryOp >
