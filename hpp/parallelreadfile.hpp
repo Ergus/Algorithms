@@ -7,11 +7,11 @@
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.	 If not, see <http://www.gnu.org/licenses/>.
 
 
 #include <iostream>
@@ -45,7 +45,7 @@ namespace my {
 			file.ignore(256, '\n');
 
 		std::string line;
-		size_t localCount = 0;
+		size_t local_count = 0;
 
 		// Read lines until we reach the end position or end of file
 		while (file.good() && file.tellg() < (int)end) {
@@ -54,14 +54,14 @@ namespace my {
 			}
 
 			// Parse the line to get name and number
-			TOp(tid, localCount, line);
+			TOp(tid, local_count, line);
 
 			// Increment counters
-			localCount++;
+			++local_count;
 		}
 
 		file.close();
-		return localCount;
+		return local_count;
 	}
 
 	template<void (*TOp)(size_t, size_t, std::string&)>
@@ -97,13 +97,68 @@ namespace my {
 		}
 
 		// Wait for all threads to complete and get their results
-		size_t totalProcessed = transform_reduce(
+		size_t total_processed = transform_reduce(
 			futures.begin(), futures.end(),
 			0,
 			std::plus{},
 			[](auto &future) { return  future.get(); });
 
-		std::cout << "Total records processed: " << totalProcessed << std::endl;
+		std::cout << "Total records processed: " << total_processed << std::endl;
+	}
+
+
+	template<void (*TOp)(size_t, size_t, std::string&)>
+	size_t process_file_rec(
+		const std::string &filename,
+		size_t start, size_t end,
+		size_t num_threads
+	) {
+		assert(num_threads > 1);
+
+		if (num_threads == 1) {
+			return process_chunk<TOp>(filename, start, end, 0);
+		}
+
+		size_t half = (start + end) / 2;
+		auto dv = std::div(num_threads, 2);
+
+		if (num_threads == 2) {
+
+			std::future<size_t> future = std::async(
+				std::launch::async,
+				&process_chunk<TOp>, filename, start, half, 0
+			);
+			size_t local = process_chunk<TOp>(filename, half, end, 0);
+
+			return local + future.get();
+		}
+
+		std::future<size_t> future1 = std::async(
+			std::launch::async,
+			process_file_rec<TOp>, filename, start, half, dv.quot + dv.rem
+		);
+
+		std::future<size_t> future2 = std::async(
+			std::launch::async,
+			process_file_rec<TOp>, filename, half, end, dv.quot
+		);
+
+		return future1.get() + future2.get();
+	}
+
+
+	template<void (*TOp)(size_t, size_t, std::string&)>
+	void process_file2(const std::string &filename, size_t num_threads)
+	{
+		auto filesize = std::filesystem::file_size(filename);
+		if (filesize == 0) {
+			std::cout << "File is empty." << std::endl;
+			return;
+		}
+
+		size_t total_processed = process_file_rec<TOp>(filename, 0, filesize, num_threads);
+
+		std::cout << "Total records processed: " << total_processed << std::endl;
 	}
 
 }

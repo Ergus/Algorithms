@@ -7,11 +7,11 @@
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.	 If not, see <http://www.gnu.org/licenses/>.
 
 #include <utils.h>
 #include <argparser.hpp>
@@ -42,12 +42,21 @@ int main(int argc, char **argv)
 
 	std::cout << "Processing file: " << filename << " with " << num_threads << " threads" << std::endl;
 
+	std::cout << "Loop parallel" << std::endl;
 	try {
 		my::process_file<my_fun>(filename, num_threads);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
+	} catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
+	}
+
+	std::cout << "Loop recursive" << std::endl;
+	try {
+		my::process_file2<my_fun>(filename, num_threads);
+	} catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+		return 1;
+	}
 
 	return 0;
 }
