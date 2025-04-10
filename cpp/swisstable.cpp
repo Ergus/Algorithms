@@ -57,9 +57,7 @@ int main()
 
 	SwissTable<std::string, int> ht;
 
-	for (size_t i = 0; i < datas.size(); ++i) {
-
-		const auto &data = datas.at(i);
+	for (std::pair<std::string, int> &data : datas) {
 
 		const bool inserted = ht.insert(data.first, data.second);
 		myassert(inserted);
