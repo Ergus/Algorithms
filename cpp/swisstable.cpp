@@ -57,33 +57,55 @@ int main()
 
 	SwissTable<std::string, int> ht;
 
+	// Test insert
 	for (std::pair<std::string, int> &data : datas) {
 
-		const bool inserted = ht.insert(data.first, data.second);
+		const bool inserted = ht.set(data.first, data.second);
 		myassert(inserted);
 	}
 
+	// Tests size and capacity
 	std::cout << "Size: " << ht.size() << ", Capacity: " << ht.capacity() << std::endl;
 	assert(ht.size() == 17);
 	assert(ht.capacity() == 32);
 
-	std::cout << "Value of 'banana': " << ht.find("banana").value_or(-1) << std::endl;
+	// Test find existing
+	assert(ht.find("banana").has_value());
+	std::cout << "Value of 'banana': " << ht.find("banana").value() << std::endl;
 	assert(ht.find("banana").value() == 2);
 
-	std::cout << "Value of 'grape': " << ht.find("grape").value_or(-1) << std::endl;
+	assert(ht.find("grape").has_value());
+	std::cout << "Value of 'grape': " << ht.find("grape").value() << std::endl;
 	assert(ht.find("grape").value() == 7);
 
+	// Test find non existing
 	std::cout << "Value of 'watermelon': " << ht.find("watermelon").value_or(-1) << std::endl;
 	assert(!ht.find("watermelon").has_value());
 
+	// Test remove a value
 	bool removed = ht.remove("banana");
 	assert(removed);
 	std::cout << "Value of 'banana' after removal: " << ht.find("banana").value_or(-1) << std::endl;
 	assert(!ht.find("banana").has_value());
 
-	ht.insert("blueberry", 18);
-	std::cout << "Value of 'blueberry': " << ht.find("blueberry").value_or(-1) << std::endl;
+	// Test insert after access
+	ht.set("blueberry", 18);
+	assert(ht.find("blueberry").has_value());
+	std::cout << "Value of 'blueberry': " << ht.find("blueberry").value() << std::endl;
 	assert(ht.find("blueberry").value() == 18);
+
+	// Test updates
+	// Update Blueberry
+	ht.set("blueberry", 20);
+	std::cout << "Value of updated 'blueberry': " << ht.find("blueberry").value() << std::endl;
+	assert(ht.find("blueberry").value() == 20);
+
+	// Update Banana
+	ht.set("banana", 20);
+	assert(ht.find("banana").has_value());
+	std::cout << "Value of 'banana': " << ht.find("banana").value() << std::endl;
+	assert(ht.find("banana").value() == 20);
+
 
 	return 0;
 }

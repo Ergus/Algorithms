@@ -75,7 +75,7 @@ private:
 		for (size_t i = 0; i < cap; ++i) {
 			if (_metadata[i] & EMPTY)
 				continue;
-			new_table.insert(_entries[i].first, _entries[i].second);
+			new_table.set(_entries[i].first, _entries[i].second);
 		}
 
 		*this = std::move(new_table);
@@ -111,7 +111,7 @@ public:
 	size_t size() const { return _size; }
 	size_t capacity() const { return _entries.size(); }
 
-	bool insert(const key_t& key, const value_t& value)
+	bool set(const key_t& key, const value_t& value)
 	{
 		const size_t cap = capacity();
 		if (size() >= cap * max_load_factor) {
