@@ -35,7 +35,7 @@
 // --- Example Usage ---
 int main()
 {
-	std::vector<std::pair<std::string, int>> datas = {
+	const std::vector<std::pair<std::string, int>> datas = {
 		{"apple", 1},
 		{"banana", 2},
 		{"cherry", 3},
@@ -55,56 +55,71 @@ int main()
 		{"tangerine", 17}
 	};
 
+
+	bool inserted = false;
+
 	SwissTable<std::string, int> ht;
 
 	// Test insert
-	for (std::pair<std::string, int> &data : datas) {
+	for (const std::pair<std::string, int> &data : datas) {
 
-		const bool inserted = ht.set(data.first, data.second);
+		inserted = ht.set(data.first, data.second);
 		myassert(inserted);
 	}
 
 	// Tests size and capacity
 	std::cout << "Size: " << ht.size() << ", Capacity: " << ht.capacity() << std::endl;
-	assert(ht.size() == 17);
-	assert(ht.capacity() == 32);
+	myassert(ht.size() == 17);
+	myassert(ht.capacity() == 32);
 
 	// Test find existing
-	assert(ht.find("banana").has_value());
+	myassert(ht.find("banana").has_value());
 	std::cout << "Value of 'banana': " << ht.find("banana").value() << std::endl;
-	assert(ht.find("banana").value() == 2);
+	myassert(ht.find("banana").value() == 2);
 
-	assert(ht.find("grape").has_value());
+	myassert(ht.find("grape").has_value());
 	std::cout << "Value of 'grape': " << ht.find("grape").value() << std::endl;
-	assert(ht.find("grape").value() == 7);
+	myassert(ht.find("grape").value() == 7);
 
 	// Test find non existing
 	std::cout << "Value of 'watermelon': " << ht.find("watermelon").value_or(-1) << std::endl;
-	assert(!ht.find("watermelon").has_value());
+	myassert(!ht.find("watermelon").has_value());
 
 	// Test remove a value
 	bool removed = ht.remove("banana");
-	assert(removed);
+	myassert(removed);
 	std::cout << "Value of 'banana' after removal: " << ht.find("banana").value_or(-1) << std::endl;
-	assert(!ht.find("banana").has_value());
+	myassert(!ht.find("banana").has_value());
 
 	// Test insert after access
-	ht.set("blueberry", 18);
-	assert(ht.find("blueberry").has_value());
+	inserted = ht.set("blueberry", 18);
+	myassert(inserted);
+	myassert(ht.find("blueberry").has_value());
 	std::cout << "Value of 'blueberry': " << ht.find("blueberry").value() << std::endl;
-	assert(ht.find("blueberry").value() == 18);
+	myassert(ht.find("blueberry").value() == 18);
+
+	// Test reinsert Banana
+	inserted = ht.set("banana", 20);
+	myassert(inserted);
+	myassert(ht.find("banana").has_value());
+	std::cout << "Value of 'banana': " << ht.find("banana").value() << std::endl;
+	myassert(ht.find("banana").value() == 20);
 
 	// Test updates
 	// Update Blueberry
-	ht.set("blueberry", 20);
+	inserted = ht.set("blueberry", 20);
+	myassert(!inserted);
 	std::cout << "Value of updated 'blueberry': " << ht.find("blueberry").value() << std::endl;
-	assert(ht.find("blueberry").value() == 20);
+	myassert(ht.find("blueberry").value() == 20);
 
-	// Update Banana
-	ht.set("banana", 20);
-	assert(ht.find("banana").has_value());
-	std::cout << "Value of 'banana': " << ht.find("banana").value() << std::endl;
-	assert(ht.find("banana").value() == 20);
+	// Test update again inplace
+	myassert(ht.find("banana").has_value());
+	inserted = ht.set("banana", 21);
+	myassert(!inserted);
+	myassert(ht.find("banana").has_value());
+	std::cout << "Value of 'banana' after removal: " << ht.find("banana").value() << std::endl;
+	myassert(ht.find("banana").has_value());
+	myassert(ht.find("banana").value() ==  21);
 
 
 	return 0;
