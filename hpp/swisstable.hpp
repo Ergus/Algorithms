@@ -24,35 +24,21 @@
 
 template <typename T>
 concept Hashable = requires(const T& a) {
-    { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
+    { std::hash<T>{}(a) } -> std::convertible_to<uint64_t>;
 };
 
-
-
-// template<>
-// struct std::hash<std::string>
-// {
-//     std::size_t operator()(const std::string& s) const noexcept
-//     {
-// 		uint64_t hash = 5381;
-// 		for (const char &c : s)
-// 			hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-// 		return hash;
-//     }
-// };
-
-
+template <typename Hasher, typename Key>
+concept InvocableHasher = requires(Hasher h, const Key& k) {
+    { h(k) } -> std::convertible_to<uint64_t>;
+};
 
 template <
 	Hashable key_t,
 	typename value_t,
-	class hasher_t = std::hash<key_t>,
+	InvocableHasher<key_t> hasher_t = std::hash<key_t>,
 	double max_load_factor = 0.75
 	>
 class SwissTable {
-
-	//static_assert(std::is_invocable_r_v<std::size_t, std::hash<key_t>(key_t), key_t>);
 
 private:
 
