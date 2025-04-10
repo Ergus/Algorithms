@@ -30,41 +30,62 @@
 // };
 
 #include "swisstable.hpp"
+#include "utils.h"
 
 // --- Example Usage ---
 int main()
 {
-    SwissTable<std::string, int> ht;
+	std::vector<std::pair<std::string, int>> datas = {
+		{"apple", 1},
+		{"banana", 2},
+		{"cherry", 3},
+		{"date", 4},
+		{"elderberry", 5},
+		{"fig", 6},
+		{"grape", 7},
+		{"kiwi", 8},
+		{"lemon", 9},
+		{"mango", 10},
+		{"nectarine", 11},
+		{"orange", 12},
+		{"pear", 13},
+		{"quince", 14},
+		{"raspberry", 15},
+		{"strawberry", 16},
+		{"tangerine", 17}
+	};
 
-    ht.insert("apple", 1);
-    ht.insert("banana", 2);
-    ht.insert("cherry", 3);
-    ht.insert("date", 4);
-    ht.insert("elderberry", 5);
-    ht.insert("fig", 6);
-    ht.insert("grape", 7);
-    ht.insert("kiwi", 8);
-    ht.insert("lemon", 9);
-    ht.insert("mango", 10);
-    ht.insert("nectarine", 11);
-    ht.insert("orange", 12);
-    ht.insert("pear", 13);
-    ht.insert("quince", 14);
-    ht.insert("raspberry", 15);
-    ht.insert("strawberry", 16);
-    ht.insert("tangerine", 17);
+	SwissTable<std::string, int> ht;
 
-    std::cout << "Size: " << ht.size() << ", Capacity: " << ht.capacity() << std::endl;
+	for (size_t i = 0; i < datas.size(); ++i) {
 
-    std::cout << "Value of 'banana': " << ht.find("banana").value_or(-1) << std::endl;
-    std::cout << "Value of 'grape': " << ht.find("grape").value_or(-1) << std::endl;
-    std::cout << "Value of 'watermelon': " << ht.find("watermelon").value_or(-1) << std::endl;
+		const auto &data = datas.at(i);
 
-    ht.remove("banana");
-    std::cout << "Value of 'banana' after removal: " << ht.find("banana").value_or(-1) << std::endl;
+		const bool inserted = ht.insert(data.first, data.second);
+		myassert(inserted);
+	}
 
-    ht.insert("blueberry", 18);
-    std::cout << "Value of 'blueberry': " << ht.find("blueberry").value_or(-1) << std::endl;
+	std::cout << "Size: " << ht.size() << ", Capacity: " << ht.capacity() << std::endl;
+	assert(ht.size() == 17);
+	assert(ht.capacity() == 32);
 
-    return 0;
+	std::cout << "Value of 'banana': " << ht.find("banana").value_or(-1) << std::endl;
+	assert(ht.find("banana").value() == 2);
+
+	std::cout << "Value of 'grape': " << ht.find("grape").value_or(-1) << std::endl;
+	assert(ht.find("grape").value() == 7);
+
+	std::cout << "Value of 'watermelon': " << ht.find("watermelon").value_or(-1) << std::endl;
+	assert(!ht.find("watermelon").has_value());
+
+	bool removed = ht.remove("banana");
+	assert(removed);
+	std::cout << "Value of 'banana' after removal: " << ht.find("banana").value_or(-1) << std::endl;
+	assert(!ht.find("banana").has_value());
+
+	ht.insert("blueberry", 18);
+	std::cout << "Value of 'blueberry': " << ht.find("blueberry").value_or(-1) << std::endl;
+	assert(ht.find("blueberry").value() == 18);
+
+	return 0;
 }

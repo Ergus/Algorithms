@@ -7,11 +7,11 @@
 
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.	 If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
@@ -21,187 +21,148 @@
 #include <cmath>
 #include <functional>
 #include <type_traits>
+#include <cassert>
+
+#include "utils.h"
 
 template <typename T>
 concept Hashable = requires(const T& a) {
-    { std::hash<T>{}(a) } -> std::convertible_to<uint64_t>;
+	{ std::hash<T>{}(a) } -> std::convertible_to<uint64_t>;
 };
 
 template <typename Hasher, typename Key>
 concept InvocableHasher = requires(Hasher h, const Key& k) {
-    { h(k) } -> std::convertible_to<uint64_t>;
+	{ h(k) } -> std::convertible_to<uint64_t>;
 };
 
 template <
 	Hashable key_t,
 	typename value_t,
 	InvocableHasher<key_t> hasher_t = std::hash<key_t>,
-	double max_load_factor = 0.75
-	>
+	double max_load_factor = 0.75 >
 class SwissTable {
 
 private:
 
 	enum Metadata : uint8_t {
-		EMPTY = 0b00000000,
-		FULL = 0b10000000,
-		DELETED = 0b01000000,
-		HASH_MASK = 0b00111111 // Lower 6 bits of the hash for grouping
+		EMPTY = 0b10000000,	   // 0x80
+		DELETED = 0b11111110,  // 0xFE
+		SENTINEL = 0b11111111, // 0xFF
 	};
 
-	struct Entry {
-		uint64_t hash;
-		key_t key;
-		value_t value;
+	using Entry = std::pair<key_t, value_t>;
 
-		Entry() = default;
+	static constexpr hasher_t _hasher {};
 
-		Entry(uint64_t h, key_t k, value_t v)
-			: hash(h), key(k), value(v)
-		{}
-	};
+	size_t _size {0};
 
-	hasher_t hasher;
+	std::vector<uint8_t> _metadata = std::vector<uint8_t>(16, EMPTY);
+	std::vector<Entry> _entries = std::vector<Entry>(16);
 
-	static constexpr size_t INITIAL_CAPACITY = 16;
-	static constexpr size_t GROUP_SIZE = 16;
-
-    size_t _capacity {INITIAL_CAPACITY};
-    size_t _size {0};
-    std::vector<uint8_t> _metadata = std::vector<uint8_t>(INITIAL_CAPACITY);
-    std::vector<Entry> _buckets = std::vector<Entry>(INITIAL_CAPACITY);
-
-    bool resize(size_t new_capacity)
+	void rehash(size_t new_capacity)
 	{
-        std::vector<Entry> old_buckets = std::move(_buckets);
-        std::vector<uint8_t> old_metadata = std::move(_metadata);
-        size_t old_capacity = _capacity;
+		size_t new_cap = get_pow_2(new_capacity);
+		if (new_capacity % 2) {
+			new_cap <<= 1;
+		}
 
-        _capacity = new_capacity;
-        _buckets.resize(_capacity);
-        _metadata.assign(_capacity, EMPTY);
-        _size = 0;
+		SwissTable<key_t, value_t, hasher_t> new_table;
+		new_table._metadata.resize(new_cap, EMPTY);
+		new_table._entries.resize(new_cap);
 
-        for (size_t i = 0; i < old_capacity; ++i) {
-            if (old_metadata[i] & FULL) {
-                insert(old_buckets[i].key, old_buckets[i].value);
-            }
-        }
-        return true;
-    }
+		const size_t cap = _entries.size();
+
+		for (size_t i = 0; i < cap; ++i) {
+			if (_metadata[i] & EMPTY)
+				continue;
+			new_table.insert(_entries[i].first, _entries[i].second);
+		}
+
+		*this = std::move(new_table);
+	}
+
+	// Find the position of the key in the table, or a position to insert it
+	std::pair<size_t, bool> find_or_insert_pos(uint64_t hash, const key_t &key) const
+	{
+		uint64_t cap = capacity();
+		assert(cap > 0);
+
+		const size_t pos = hash & (cap - 1);
+		const uint8_t h2 = (hash >> 7) & 0x7F;
+
+		for (size_t i = pos; i < _metadata.size(); ++i) {
+
+			// Found empty slot
+			if (_metadata[i] == EMPTY)
+				return {i, false};
+
+			// Found potential match
+			if (_metadata[i] == h2 && _entries[i].first == key)
+				return {i, true};
+		}
+
+		return {cap, false};
+	}
 
 public:
 
 	SwissTable() = default;
 
-    size_t size() const { return _size; }
-    size_t capacity() const { return _capacity; }
+	size_t size() const { return _size; }
+	size_t capacity() const { return _entries.size(); }
 
-    bool insert(const key_t& key, value_t value)
+	bool insert(const key_t& key, const value_t& value)
 	{
-        if (static_cast<double>(_size) / _capacity >= max_load_factor) {
-            if (!resize(_capacity * 2)) {
-                return false;
-            }
-        }
+		const size_t cap = capacity();
+		if (size() >= cap * max_load_factor) {
+			rehash(cap << 1);
+		}
 
-        const uint64_t hash = hasher(key);
-        size_t index = hash % _capacity;
-        uint8_t group_hash = static_cast<uint8_t>(hash & HASH_MASK);
+		const uint64_t hash = _hasher(key);
+		auto [pos, found] = find_or_insert_pos(hash, key);
 
-        // Probe for an empty or deleted slot within a small group
-        for (size_t offset = 0; offset < GROUP_SIZE; ++offset) {
-            size_t probe_index = (index + offset) % _capacity;
-            if (!(_metadata[probe_index] & FULL)) { // Empty or Deleted
-                _buckets[probe_index] = Entry(hash, key, value);
-                _metadata[probe_index] = FULL | group_hash;
-                ++_size;
-                return true;
-            }
-        }
+		if (found) {
+			// Update existing key
+			_entries[pos].second = value;
+			return false;
+		}
 
-        // If no space in the initial group, perform linear probing
-        size_t current_index = index;
-        while (_metadata[current_index] & FULL) {
-            current_index = (current_index + 1) % _capacity;
-        }
+		// Not found
+		assert(pos != cap);
+		// Insert new key
+		_metadata[pos] = (hash >> 7) & 0x7F;
+		_entries[pos] = {key, value};
+		++_size;
+		return true;
+	}
 
-        _buckets[current_index] = Entry(hash, key, value);
-        _metadata[current_index] = FULL | group_hash;
-        ++_size;
-        return true;
-    }
-
-    const std::optional<value_t> find(const key_t& key) const
+	const std::optional<value_t> find(const key_t& key) const
 	{
-        uint64_t hash = hasher(key);
-        size_t index = hash % _capacity;
-        uint8_t group_hash = static_cast<uint8_t>(hash & HASH_MASK);
+		assert(_size > 0);
 
-        // First, check the "group" of GROUP_SIZE around the initial index
-        for (size_t offset = 0; offset < GROUP_SIZE; ++offset) {
-            size_t probe_index = (index + offset) % _capacity;
-            if ((_metadata[probe_index] & FULL) &&
-                (_metadata[probe_index] & HASH_MASK) == group_hash &&
-                _buckets[probe_index].hash == hash &&
-                _buckets[probe_index].key == key) {
-                return std::optional(_buckets[probe_index].value);
-            }
-        }
+		const uint64_t hash = _hasher(key);
+		auto [pos, found] = find_or_insert_pos(hash, key);
 
-        // If not found in the group, perform linear probing
-        size_t current_index = index;
-        while (_metadata[current_index] & FULL) {
-            if ((_metadata[current_index] & HASH_MASK) == group_hash &&
-                _buckets[current_index].hash == hash &&
-                _buckets[current_index].key == key) {
-                return _buckets[current_index].value;
-            }
-            current_index = (current_index + 1) % _capacity;
-            if (current_index == index)
-				break; // Avoid infinite loop if table is full
-        }
+		if (found)
+			return std::optional<value_t>(_entries[pos].second);
 
-        return  std::nullopt;
-    }
+		return std::nullopt;
+	}
 
-    bool remove(const key_t& key)
+	bool remove(const key_t& key)
 	{
-        const uint64_t hash = hasher(key);
-        size_t index = hash % _capacity;
-        uint8_t group_hash = static_cast<uint8_t>(hash & HASH_MASK);
+		const uint64_t hash = _hasher(key);
+		auto [pos, found] = find_or_insert_pos(hash, key);
 
-        // Check the initial group
-        for (size_t offset = 0; offset < GROUP_SIZE; ++offset) {
-            size_t probe_index = (index + offset) % _capacity;
-            if ((_metadata[probe_index] & FULL) &&
-                (_metadata[probe_index] & HASH_MASK) == group_hash &&
-                _buckets[probe_index].hash == hash &&
-                _buckets[probe_index].key == key) {
-                // No need to explicitly clear the key string, destructor handles it
-                _buckets[probe_index].value = value_t();
-                _metadata[probe_index] = DELETED | group_hash;
-                --_size;
-                return true;
-            }
-        }
+		if (!found)
+			return false;
 
-        // Linear probe if not found in the group
-        size_t current_index = index;
-        while (_metadata[current_index] & FULL) {
-            if ((_metadata[current_index] & HASH_MASK) == group_hash &&
-                _buckets[current_index].hash == hash &&
-                _buckets[current_index].key == key) {
-                _buckets[current_index].value = value_t();
-                _metadata[current_index] = DELETED | group_hash;
-                --_size;
-                return true;
-            }
-            current_index = (current_index + 1) % _capacity;
-            if (current_index == index) break;
-        }
+		// Mark as deleted
+		_metadata[pos] = DELETED;
+		--_size;
 
-        return false;
-    }
+		return true;
+	}
+
 };
 
